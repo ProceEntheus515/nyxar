@@ -15,6 +15,13 @@ from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
 
+from auto_response.approval import ApprovalManager, CHANNEL_APPROVALS_READY
+from auto_response.audit import (
+    AuditLogger,
+    build_context_snapshot,
+    ensure_audit_log_indexes,
+    _safe_payload_fragment,
+)
 from auto_response.models import ResponsePlan
 from auto_response.playbook_select import (
     build_response_plan,
@@ -47,6 +54,7 @@ class ResponseEngine:
         self._block = BlockIPPlaybook(self.mongo, self.redis_bus)
         self._quarantine = QuarantinePlaybook(self.mongo, self.redis_bus)
         self._disable = DisableUserPlaybook(self.mongo, self.redis_bus)
+        self._audit = AuditLogger(self.mongo)
         self._running = False
 
     def _pb_for(self, tipo: str):
@@ -82,6 +90,7 @@ class ResponseEngine:
             )
         except Exception as e:
             logger.warning("Indice response_proposals compuesto: %s", e)
+        await ensure_audit_log_indexes(db)
 
     @staticmethod
     def evaluate_incident(incident: Dict[str, Any]) -> Optional[ResponsePlan]:
@@ -141,7 +150,38 @@ class ResponseEngine:
         if not db:
             return None
         await db[COL_PROPOSALS].insert_one(doc)
+        snap = await build_context_snapshot(db, incident_id)
+        plan_json = plan.model_dump(mode="json")
+        actor_prop = "sistema_automatico" if auto_aprobado else "nyxar_engine"
+        await self._audit.log_action(
+            tipo="propuesta",
+            proposal_id=proposal_id,
+            actor=actor_prop,
+            incident_id=incident_id,
+            playbook=str(plan.playbook_nombre),
+            objetivo=incident_id,
+            detalle={
+                **snap,
+                "urgencia": plan_json.get("urgencia"),
+                "acciones": [
+                    a.get("tipo")
+                    for a in plan_json.get("acciones", [])
+                    if isinstance(a, dict)
+                ],
+            },
+            exitoso=None,
+        )
         if auto_aprobado:
+            await self._audit.log_action(
+                tipo="aprobacion",
+                proposal_id=proposal_id,
+                actor="sistema_automatico",
+                incident_id=incident_id,
+                playbook=str(plan.playbook_nombre),
+                objetivo=incident_id,
+                detalle={**snap, "origen": "AUTO_RESPONSE_CRITICO"},
+                exitoso=None,
+            )
             await self.execute_approved(proposal_id)
         return proposal_id
 
@@ -238,6 +278,23 @@ class ResponseEngine:
                     "payload_redactado": exec_out.get("payload_redactado") or {},
                 }
                 await audit.insert_one(audit_doc)
+                ctx_snap = await build_context_snapshot(db, incident_id)
+                await self._audit.log_action(
+                    tipo="resultado",
+                    proposal_id=proposal_id,
+                    actor=ejecutado_by,
+                    incident_id=incident_id,
+                    playbook=accion.tipo,
+                    objetivo=accion.objetivo,
+                    detalle={
+                        **ctx_snap,
+                        "detalle_accion": (entry.get("detalle") or "")[:500],
+                        "payload_meta": _safe_payload_fragment(
+                            exec_out.get("payload_redactado")
+                        ),
+                    },
+                    exitoso=entry["exito"],
+                )
         except Exception as e:
             logger.error("execute_approved fallo: %s", e)
             await coll.update_one(
@@ -338,6 +395,48 @@ class ResponseEngine:
                 logger.error("auto_response polling error: %s", e)
             await asyncio.sleep(poll_s)
 
+    async def _on_approval_ready_message(self, data: Dict[str, Any]) -> None:
+        if not isinstance(data, dict):
+            return
+        pid = data.get("proposal_id")
+        if not pid:
+            return
+        try:
+            await self.execute_approved(str(pid))
+        except Exception as e:
+            logger.warning("execute_approved via approvals:ready: %s", e)
+
+    async def _run_approvals_listener(self) -> None:
+        if not self.redis_bus.client:
+            return
+        try:
+            await self.redis_bus.subscribe_alerts(
+                CHANNEL_APPROVALS_READY,
+                self._on_approval_ready_message,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.warning("Listener %s: %s", CHANNEL_APPROVALS_READY, e)
+
+    async def _approval_expire_loop(self) -> None:
+        poll_s = 900
+        try:
+            poll_s = max(60, int(os.getenv("APPROVAL_EXPIRE_POLL_S", "900") or "900"))
+        except ValueError:
+            poll_s = 900
+        while self._running:
+            await asyncio.sleep(poll_s)
+            if not self._running:
+                break
+            try:
+                am = ApprovalManager(self.mongo, self.redis_bus, self._audit)
+                n = await am.auto_expire()
+                if n:
+                    logger.info("Propuestas expiradas por timeout: %s", n)
+            except Exception as e:
+                logger.warning("approval auto_expire: %s", e)
+
     async def start(self) -> None:
         enabled = os.getenv("AUTO_RESPONSE_ENABLED", "").strip().lower() in (
             "1",
@@ -364,6 +463,10 @@ class ResponseEngine:
 
         await self._ensure_indexes()
         self._running = True
+
+        if use_redis and self.redis_bus.client:
+            asyncio.create_task(self._run_approvals_listener())
+        asyncio.create_task(self._approval_expire_loop())
 
         try:
             await self._run_change_stream()

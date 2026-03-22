@@ -231,7 +231,10 @@ class RedisBus:
             try:
                 async for message in pubsub.listen():
                     if message["type"] == "message":
-                        await callback(json.loads(message["data"]))
+                        raw = message["data"]
+                        if isinstance(raw, bytes):
+                            raw = raw.decode("utf-8", errors="replace")
+                        await callback(json.loads(raw))
             except Exception as e:
                 logger.error(f"Error procesando mensajes PubSub en {canal}: {e}")
                 raise

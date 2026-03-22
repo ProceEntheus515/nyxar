@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from typing import Dict, Any
@@ -11,8 +12,11 @@ from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
 
 # Routers
-from api.routers import events, identities, incidents, alerts, simulator, ai, response_proposals
+from api.routers import events, identities, incidents, alerts, simulator, ai, response, response_proposals
 from api.routers.identity import router as identity_router, ensure_nyxar_start_time
+from api.routers.response import ensure_response_audit_indexes
+from auto_response.approval import ApprovalManager
+from auto_response.audit import AuditLogger
 
 logger = get_logger("api.main")
 
@@ -25,11 +29,34 @@ async def lifespan(app: FastAPI):
     
     await redis_bus.connect()
     await mongo_client.connect()
+    await ensure_response_audit_indexes()
     logger.info("Conexiones de API a Redis y MongoDB establecidas.")
-    
+
+    async def approval_expire_poll() -> None:
+        await asyncio.sleep(60)
+        try:
+            poll_s = max(60, int(os.getenv("APPROVAL_EXPIRE_POLL_S", "900") or "900"))
+        except ValueError:
+            poll_s = 900
+        while True:
+            try:
+                am = ApprovalManager(mongo_client, None, AuditLogger(mongo_client))
+                n = await am.auto_expire()
+                if n:
+                    logger.info("APPROVAL expire (API): %s propuestas", n)
+            except Exception as e:
+                logger.warning("APPROVAL expire poll: %s", e)
+            await asyncio.sleep(poll_s)
+
+    expire_task = asyncio.create_task(approval_expire_poll())
+
     yield
-    
-    # Clean up (si existiera .close())
+
+    expire_task.cancel()
+    try:
+        await expire_task
+    except asyncio.CancelledError:
+        pass
     logger.info("API apagada.")
 
 app = FastAPI(
@@ -76,6 +103,7 @@ app.include_router(identities.router, prefix="/api/v1")
 app.include_router(incidents.router, prefix="/api/v1")
 app.include_router(alerts.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
+app.include_router(response.router, prefix="/api/v1")
 app.include_router(response_proposals.router, prefix="/api/v1")
 
 if os.getenv("LAB_MODE", "false").lower() == "true":
