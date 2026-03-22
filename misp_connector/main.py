@@ -7,7 +7,7 @@ import asyncio
 from shared.logger import get_logger
 
 from misp_connector.client import MISPClient
-from misp_connector import contributor
+from misp_connector.contributor import MISPContributor
 from misp_connector.ingestor import MISPIngestor
 
 logger = get_logger("misp_connector.main")
@@ -25,6 +25,7 @@ async def main() -> None:
         await asyncio.sleep(RETRY_CONNECT_S)
 
     ingestor = MISPIngestor()
+    contributor = MISPContributor()
     await asyncio.gather(
         ingestor.start(client),
         contributor.start(client),

@@ -32,7 +32,11 @@ class MongoClient:
             cls._instance = super(MongoClient, cls).__new__(cls)
             cls._instance._client = None
             cls._instance.db = None
-            cls._instance.mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017/cyberpulse")
+            cls._instance.mongo_url = (
+                os.getenv("MONGO_URL")
+                or os.getenv("MONGODB_URL")
+                or "mongodb://localhost:27017/cyberpulse"
+            )
         return cls._instance
 
     async def connect(self) -> None:
