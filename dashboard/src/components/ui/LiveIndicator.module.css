@@ -1,0 +1,45 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+}
+
+.dotLive {
+  background: var(--cyan-base);
+}
+
+.dotOff {
+  background: var(--base-muted);
+}
+
+.rate {
+  font-family: var(--font-data);
+  font-size: var(--text-xs);
+  color: var(--base-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.reconnect {
+  font-family: var(--font-data);
+  font-size: var(--text-xs);
+  color: var(--base-subtle);
+  opacity: 0.6;
+  animation: reconnectBlink 2.2s ease-in-out infinite;
+}
+
+@keyframes reconnectBlink {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}

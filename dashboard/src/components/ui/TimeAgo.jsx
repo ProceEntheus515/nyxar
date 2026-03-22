@@ -1,48 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'
+import styles from './TimeAgo.module.css'
 
-function getRelativeTime(dateString) {
-  const date = new Date(dateString);
-  const now = new Date();
-  
-  if (isNaN(date)) return 'fecha inválida';
-  
-  const diffInSeconds = Math.floor((now - date) / 1000);
-  
-  if (diffInSeconds < 30) return 'hace un momento';
-  if (diffInSeconds < 60) return `hace ${diffInSeconds} segundos`;
+function formatRelative(iso) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return 'fecha inválida'
 
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes === 1) return 'hace 1 minuto';
-  if (diffInMinutes < 60) return `hace ${diffInMinutes} minutos`;
+  const now = Date.now()
+  const diffSec = Math.floor((now - date.getTime()) / 1000)
 
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours === 1) return 'hace 1 hora';
-  if (diffInHours < 24) return `hace ${diffInHours} horas`;
+  if (diffSec < 0) {
+    return date.toLocaleString('es', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
 
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays === 1) return 'hace 1 día';
-  return `hace ${diffInDays} días`;
+  if (diffSec < 60) return 'hace un momento'
+
+  const diffMin = Math.floor(diffSec / 60)
+  if (diffMin < 60) return diffMin === 1 ? 'hace 1 min' : `hace ${diffMin} min`
+
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) return diffH === 1 ? 'hace 1 h' : `hace ${diffH} h`
+
+  const diffD = Math.floor(diffH / 24)
+  if (diffD <= 7) return diffD === 1 ? 'hace 1 d' : `hace ${diffD} d`
+
+  return date.toLocaleString('es', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
+/**
+ * Tiempo relativo en español, actualizado cada 30 s (F07).
+ */
 export default function TimeAgo({ timestamp, className = '' }) {
-  const [relativeTime, setRelativeTime] = useState(() => getRelativeTime(timestamp));
+  const [text, setText] = useState(() => formatRelative(timestamp))
 
   useEffect(() => {
-    setRelativeTime(getRelativeTime(timestamp)); // Actualiza al montar por si el prop cambio
-
-    const interval = setInterval(() => {
-      setRelativeTime(getRelativeTime(timestamp));
-    }, 30000); // Se actualiza 30s
-
-    return () => clearInterval(interval);
-  }, [timestamp]);
+    setText(formatRelative(timestamp))
+    const id = window.setInterval(() => {
+      setText(formatRelative(timestamp))
+    }, 30000)
+    return () => window.clearInterval(id)
+  }, [timestamp])
 
   return (
-    <span
-      className={`text-[11px] text-[var(--text-sec)] font-medium ${className}`}
-      title={new Date(timestamp).toLocaleString()}
+    <time
+      className={`${styles.time} ${className}`.trim()}
+      dateTime={timestamp}
+      title={new Date(timestamp).toLocaleString('es')}
     >
-      {relativeTime}
-    </span>
-  );
+      {text}
+    </time>
+  )
 }

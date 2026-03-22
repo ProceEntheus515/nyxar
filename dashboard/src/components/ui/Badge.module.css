@@ -1,0 +1,85 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-full);
+  font-family: var(--font-data);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
+.sizeSm {
+  padding: 2px 8px;
+  font-size: 10px;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.sizeMd {
+  padding: 4px 10px;
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.variantDefault {
+  background: color-mix(in srgb, var(--base-surface) 88%, transparent);
+  border-color: var(--base-border);
+  color: var(--base-soft);
+}
+
+.variantCritical {
+  background: color-mix(in srgb, var(--critical-bg) 92%, transparent);
+  border-color: var(--critical-border);
+  color: var(--critical-bright);
+}
+
+.variantHigh {
+  background: color-mix(in srgb, var(--high-bg) 92%, transparent);
+  border-color: var(--high-border);
+  color: var(--high-bright);
+}
+
+.variantMedium {
+  background: color-mix(in srgb, var(--medium-bg) 92%, transparent);
+  border-color: var(--medium-border);
+  color: var(--medium-bright);
+}
+
+.variantClean {
+  background: color-mix(in srgb, var(--clean-bg) 92%, transparent);
+  border-color: var(--clean-border);
+  color: var(--clean-bright);
+}
+
+.variantInfo {
+  background: color-mix(in srgb, var(--info-bg) 92%, transparent);
+  border-color: var(--info-border);
+  color: var(--info-bright);
+}
+
+.variantCyan {
+  background: color-mix(in srgb, var(--cyan-dim) 85%, transparent);
+  border-color: var(--cyan-border);
+  color: var(--cyan-bright);
+}
+
+.dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dotInner {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}

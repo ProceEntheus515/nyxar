@@ -1,0 +1,50 @@
+@keyframes tooltipFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.trigger {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: var(--z-overlay);
+  max-width: 240px;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--base-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--base-overlay);
+  box-shadow: var(--shadow-md);
+  color: var(--base-text);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  pointer-events: auto;
+  animation: tooltipFadeUp 150ms var(--ease-out) both;
+}
+
+.sideTop {
+  transform-origin: bottom center;
+}
+
+.sideBottom {
+  transform-origin: top center;
+}
+
+.sideLeft {
+  transform-origin: right center;
+}
+
+.sideRight {
+  transform-origin: left center;
+}
