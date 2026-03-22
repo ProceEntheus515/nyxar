@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { VariableSizeList as List } from 'react-window';
+import React, { useState, useMemo, useCallback } from 'react';
+import { List, useListRef } from 'react-window';
 import Card from '../components/ui/Card';
 import TimeAgo from '../components/ui/TimeAgo';
 import RiskBadge from '../components/ui/RiskBadge';
@@ -58,87 +58,89 @@ const SourceIcon = ({ source }) => {
   );
 };
 
+function timelineRowHeight(index, { filteredEvents, alerts }) {
+  const e = filteredEvents[index];
+  if (!e) return 120;
+  const isIncident = alerts.some((al) => al.evento_original_id === e.id);
+  return isIncident ? 160 : 120;
+}
+
+function TimelineRow({ index, style, ariaAttributes, filteredEvents, alerts }) {
+  const e = filteredEvents[index];
+  if (!e) return null;
+
+  const isIncident = alerts.some((al) => al.evento_original_id === e.id);
+  const incidentData = alerts.find((al) => al.evento_original_id === e.id);
+  const hasRisk = (e.enrichment?.risk_score || 0) > 40;
+
+  return (
+    <div style={{ ...style, paddingBottom: '8px' }} {...ariaAttributes}>
+      <Card
+        className={`h-full flex flex-col p-4 animate-fade-in ${isIncident ? 'border-l-4' : ''}`}
+        style={isIncident ? { borderLeftColor: 'var(--color-critical)' } : {}}
+        glow={isIncident}
+        glowColor={incidentData?.severidad === 'CRÍTICA' ? 'var(--color-critical)' : 'transparent'}
+      >
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-3">
+            <SourceIcon source={e.source} />
+            <TimeAgo timestamp={e.timestamp} />
+          </div>
+          {hasRisk && !isIncident && <RiskBadge score={e.enrichment.risk_score} severidad="alta" />}
+          {isIncident && <RiskBadge score={null} severidad={incidentData.severidad} />}
+        </div>
+
+        <div className="flex items-center gap-3 mb-2">
+          <AreaBadge area={e.interno?.area || 'Desconocido'} />
+          <MonoText className="truncate w-1/2">{e.interno?.id_usuario || e.interno?.ip}</MonoText>
+        </div>
+
+        <p className="text-sm text-[var(--text-main)] truncate mt-1">
+          Revisión hacia <MonoText>{e.externo?.valor}</MonoText>
+        </p>
+
+        {isIncident && (
+          <div className="mt-2 text-xs text-[var(--color-critical)] rounded bg-[#FF4757]/10 p-2 border border-[var(--color-critical)]">
+            {incidentData.descripcion}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 export default function Timeline() {
   const { events, alerts } = useStore();
   const [filterSource, setFilterSource] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
-  const listRef = useRef();
+  const listRef = useListRef();
 
-  // Filtrar eventos base
   const filteredEvents = useMemo(() => {
     let evts = events || [];
     if (filterSource) {
-      evts = evts.filter(e => e.source?.toLowerCase().includes(filterSource));
+      evts = evts.filter((e) => e.source?.toLowerCase().includes(filterSource));
     }
     return evts;
   }, [events, filterSource]);
 
-  const handleScroll = ({ scrollOffset }) => {
-    setIsScrolled(scrollOffset > 50);
-  };
+  const rowProps = useMemo(() => ({ filteredEvents, alerts }), [filteredEvents, alerts]);
+
+  const handleRowsRendered = useCallback((visible) => {
+    setIsScrolled(visible.startIndex > 0);
+  }, []);
 
   const scrollToTop = () => {
-    if (listRef.current) {
-      listRef.current.scrollTo(0);
-      setIsScrolled(false);
-    }
-  };
-
-  const Row = ({ index, style }) => {
-    const e = filteredEvents[index];
-    if (!e) return null;
-    
-    const isIncident = alerts.some(al => al.evento_original_id === e.id);
-    const incidentData = alerts.find(al => al.evento_original_id === e.id);
-    const hasRisk = (e.enrichment?.risk_score || 0) > 40;
-
-    return (
-      <div style={{ ...style, paddingBottom: '8px' }}>
-        <Card 
-          className={`h-full flex flex-col p-4 animate-fade-in ${isIncident ? 'border-l-4' : ''}`}
-          style={isIncident ? { borderLeftColor: 'var(--color-critical)' } : {}}
-          glow={isIncident}
-          glowColor={incidentData?.severidad === 'CRÍTICA' ? 'var(--color-critical)' : 'transparent'}
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex items-center gap-3">
-              <SourceIcon source={e.source} />
-              <TimeAgo timestamp={e.timestamp} />
-            </div>
-            {hasRisk && !isIncident && (
-               <RiskBadge score={e.enrichment.risk_score} severidad="alta" />
-            )}
-            {isIncident && (
-               <RiskBadge score={null} severidad={incidentData.severidad} />
-            )}
-          </div>
-          
-          <div className="flex items-center gap-3 mb-2">
-            <AreaBadge area={e.interno?.area || 'Desconocido'} />
-            <MonoText className="truncate w-1/2">{e.interno?.id_usuario || e.interno?.ip}</MonoText>
-          </div>
-          
-          <p className="text-sm text-[var(--text-main)] truncate mt-1">
-            Revisión hacia <MonoText>{e.externo?.valor}</MonoText>
-          </p>
-          
-          {isIncident && (
-            <div className="mt-2 text-xs text-[var(--color-critical)] rounded bg-[# FF4757]/10 p-2 border border-[var(--color-critical)]">
-              {incidentData.descripcion}
-            </div>
-          )}
-        </Card>
-      </div>
-    );
+    listRef.current?.scrollToRow({ index: 0, behavior: 'instant' });
+    setIsScrolled(false);
   };
 
   return (
     <div className="h-full flex flex-col relative w-full h-[calc(100vh-100px)]">
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <h2 className="text-xl font-semibold text-white">Live Event Timeline</h2>
-        <select 
+        <select
           value={filterSource}
-          onChange={e => setFilterSource(e.target.value)}
+          onChange={(e) => setFilterSource(e.target.value)}
           className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded p-2 text-sm text-white outline-none"
         >
           <option value="">Todas las Fuentes</option>
@@ -150,25 +152,25 @@ export default function Timeline() {
       </div>
 
       {isScrolled && (
-        <button 
+        <button
+          type="button"
           onClick={scrollToTop}
           className="absolute top-16 left-1/2 -translate-x-1/2 z-10 bg-[var(--color-primary)] text-black px-4 py-1.5 rounded-full font-bold text-xs shadow-lg shadow-[var(--color-primary)]/20 animate-slide-in-right"
         >
-          Volver arriba ⬆
+          Volver arriba
         </button>
       )}
 
       <div className="flex-1 w-full relative">
         <List
-          ref={listRef}
-          height={800} // Ajustable dinámicamente si se wrappea con AutoSizer
-          itemCount={filteredEvents.length}
-          itemSize={index => alerts.some(al => al.evento_original_id === filteredEvents[index]?.id) ? 160 : 120}
-          width="100%"
-          onScroll={handleScroll}
-        >
-          {Row}
-        </List>
+          listRef={listRef}
+          rowCount={filteredEvents.length}
+          rowHeight={timelineRowHeight}
+          rowComponent={TimelineRow}
+          rowProps={rowProps}
+          onRowsRendered={handleRowsRendered}
+          style={{ height: 800, width: '100%' }}
+        />
       </div>
     </div>
   );

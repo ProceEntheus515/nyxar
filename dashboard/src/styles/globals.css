@@ -19,6 +19,46 @@
   --color-media: #FFDD57;
   --color-baja: #7BED9F;
   --color-info: #7B68EE;
+
+  /* Tokens compartidos: Sidebar / About (alineados al prompt de identidad) */
+  --font-data: 'JetBrains Mono', ui-monospace, monospace;
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-sm: 4px;
+  --radius-lg: 12px;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --leading-normal: 1.5;
+  --base-surface: var(--bg-card);
+  --base-border: var(--border-default);
+  --base-border-strong: #30363d;
+  --base-bright: var(--text-main);
+  --base-muted: var(--text-sec);
+  --base-subtle: #9ca3af;
+  --base-soft: #c9d1d9;
+  --cyan-base: #38b2cc;
+  --cyan-bright: #38b2cc;
+  --cyan-dim: rgba(56, 178, 204, 0.08);
+  --cyan-border: rgba(56, 178, 204, 0.28);
+  --cyan-soft: #7dd3e8;
+  --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.45);
+  --z-modal: 5000;
 }
 
 body {
@@ -115,4 +155,15 @@ body {
     rgba(255, 255, 255, 0) 100%
   );
   animation: shimmer 1.5s infinite;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

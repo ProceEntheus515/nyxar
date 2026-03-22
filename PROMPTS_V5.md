@@ -957,7 +957,7 @@ NO HAGAS:
 ## N04 — El Manifiesto
 
 ### PROMPT N04 — The Manifesto
-**Rol:** ✍️ Technical Writer / Naming Philosopher  
+**Rol:** Technical Writer / Naming Philosopher  
 **Entregable:** El texto completo del endpoint de identidad — en su forma definitiva
 
 ```

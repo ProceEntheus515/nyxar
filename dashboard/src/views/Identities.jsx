@@ -73,8 +73,8 @@ export default function Identities() {
                 </div>
                 
                 <div className="flex items-center gap-4 h-10">
-                  <div className="flex-1 h-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="flex-1 h-10 min-w-0">
+                    <ResponsiveContainer width="100%" height={40}>
                       <LineChart data={history}>
                         <YAxis domain={[0, 100]} hide />
                         <Line type="monotone" dataKey="val" stroke="var(--color-primary)" strokeWidth={2} dot={false} isAnimationActive={false} />

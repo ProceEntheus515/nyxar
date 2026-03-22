@@ -1164,7 +1164,7 @@ NO HAGAS:
 ---
 
 ### PROMPT V08 — Automation Dev
-**Rol:** 🤖 Automation Developer  
+**Rol:** Automation Developer  
 **Componente:** Flujo de aprobación humana y auditoría  
 **Entregable:** `auto_response/approval.py` y `auto_response/audit.py`
 
@@ -1336,12 +1336,12 @@ NO HAGAS:
 
 ---
 
-## 🧠 MÓDULO THREAT HUNTING
+## MÓDULO THREAT HUNTING
 
 ---
 
 ### PROMPT V09 — AI Engineer
-**Rol:** 🧠 AI Engineer / Threat Hunter  
+**Rol:** AI Engineer / Threat Hunter  
 **Componente:** Motor de hipótesis de hunting  
 **Entregable:** `threat_hunting/hypothesis_engine.py` y prompts
 

@@ -1,0 +1,35 @@
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4);
+  border-bottom: 1px solid var(--base-border);
+  user-select: none;
+}
+
+.logoImage {
+  height: 24px;
+  width: auto;
+  max-width: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.logoSymbol {
+  font-size: 18px;
+  color: var(--cyan-base);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+}
+
+.logoName {
+  font-family: var(--font-data);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+  color: var(--base-bright);
+  text-transform: uppercase;
+}

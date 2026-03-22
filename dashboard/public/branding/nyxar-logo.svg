@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NYXAR  marca (solo hexágono + nodos). Uso: sidebar junto al texto NYXAR en UI.
+  Identidad: hexágono eficiente, un nodo activo (cian #38B2CC), resto en gris azulado.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 82" role="img" aria-label="NYXAR">
+  <defs>
+    <filter id="nyxar-node-glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Hexágono regular, vértice superior; trazo discreto -->
+  <polygon
+    fill="none"
+    stroke="#6b7f94"
+    stroke-width="1.15"
+    stroke-linejoin="round"
+    points="50,15 69.92,26.5 69.92,49.5 50,61 30.08,49.5 30.08,26.5"
+  />
+  <!-- Nodos en vértices; el superior-derecho lleva glow (vigilancia / foco operativo) -->
+  <circle cx="50" cy="15" r="2.35" fill="#6b7f94" />
+  <circle cx="69.92" cy="26.5" r="2.55" fill="#38b2cc" filter="url(#nyxar-node-glow)" />
+  <circle cx="69.92" cy="49.5" r="2.35" fill="#6b7f94" />
+  <circle cx="50" cy="61" r="2.35" fill="#6b7f94" />
+  <circle cx="30.08" cy="49.5" r="2.35" fill="#6b7f94" />
+  <circle cx="30.08" cy="26.5" r="2.35" fill="#6b7f94" />
+</svg>

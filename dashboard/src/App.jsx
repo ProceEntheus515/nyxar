@@ -1,16 +1,27 @@
-import React, { Suspense, useState, useEffect } from 'react';
-import { useWebSocket } from './hooks/useWebSocket';
-import { useStore } from './store';
-import Skeleton from './components/ui/Skeleton';
-import StatusDot from './components/ui/StatusDot';
+import React, { Suspense, useState, useEffect } from 'react'
+import { useWebSocket } from './hooks/useWebSocket'
+import { useStore } from './store'
+import Skeleton from './components/ui/Skeleton'
+import StatusDot from './components/ui/StatusDot'
+import { Sidebar } from './components/layout/Sidebar'
 
-import { MOCK_DATA } from './lib/mock';
+import { MOCK_DATA } from './lib/mock'
 
-// Lazy load views para performance
-const NetworkMap = React.lazy(() => import('./views/NetworkMap'));
-const Timeline = React.lazy(() => import('./views/Timeline'));
-const Identities = React.lazy(() => import('./views/Identities'));
-const AttackInjector = React.lazy(() => import('./views/AttackInjector'));
+const TAB_TITLES = {
+  map: 'NYXAR — Red',
+  timeline: 'NYXAR — Timeline',
+  identities: 'NYXAR — Identidades',
+  hunting: 'NYXAR — Hunting',
+  response: 'NYXAR — Respuestas',
+  reports: 'NYXAR — Reportes',
+  ceo: 'NYXAR — Vista Ejecutiva',
+  health: 'NYXAR — Sistema',
+}
+
+const NetworkMap = React.lazy(() => import('./views/NetworkMap'))
+const Timeline = React.lazy(() => import('./views/Timeline'))
+const Identities = React.lazy(() => import('./views/Identities'))
+const AttackInjector = React.lazy(() => import('./views/AttackInjector'))
 
 function LoadingView() {
   return (
@@ -21,86 +32,66 @@ function LoadingView() {
         <Skeleton width="100%" height="100%" />
       </div>
     </div>
-  );
+  )
 }
 
 export default function App() {
-  // Inicializamos y atamos el Websocket Singleton al ciclo de vida global
-  useWebSocket();
-  
-  const { isLabMode, identities, stats, setInitialState } = useStore();
-  const [activeTab, setActiveTab] = useState('map');
+  useWebSocket()
 
-  // Request inicial status o simulacion (opcional)
+  const { isLabMode, identities, stats, setInitialState } = useStore()
+  const [activeTab, setActiveTab] = useState('map')
+
   useEffect(() => {
-    // Inject Mock initial data instantly to allow rendering without backend!
-    setInitialState(MOCK_DATA);
-  }, []);
+    setInitialState(MOCK_DATA)
+  }, [])
+
+  useEffect(() => {
+    document.title = TAB_TITLES[activeTab] || 'NYXAR'
+  }, [activeTab])
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex flex-col overflow-hidden">
-      {/* Header Corporativo SOC */}
-      <header className="h-[60px] bg-[#161B22] border-b border-[var(--border-default)] flex items-center justify-between px-6 shrink-0 z-50 shadow-md">
-        <div className="flex items-center gap-4">
-          <div className="w-8 h-8 rounded shrink-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-info)] flex items-center justify-center font-bold text-black border shadow-[0_0_10px_var(--color-primary)]">
-            CP
-          </div>
-          <div>
-            <h1 className="font-bold text-[15px] tracking-wide m-0 leading-tight font-mono">NYXAR</h1>
-            <p className="text-[10px] text-[var(--color-primary)] uppercase tracking-widest font-mono">SOC Central Dashboard</p>
-          </div>
-        </div>
+    <div className="min-h-screen h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex overflow-hidden">
+      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-        <nav className="flex gap-1 h-full pt-4">
-          <button 
-            onClick={() => setActiveTab('map')}
-            className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'map' ? 'border-[var(--color-primary)] text-white' : 'border-transparent text-[var(--text-sec)] hover:text-white'}`}
-          >
-            Network Graph
-          </button>
-          <button 
-            onClick={() => setActiveTab('timeline')}
-            className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'timeline' ? 'border-[var(--color-primary)] text-white' : 'border-transparent text-[var(--text-sec)] hover:text-white'}`}
-          >
-            Live Events Timeline
-          </button>
-          <button 
-            onClick={() => setActiveTab('identities')}
-            className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'identities' ? 'border-[var(--color-primary)] text-white' : 'border-transparent text-[var(--text-sec)] hover:text-white'}`}
-          >
-            Risk Identities
-          </button>
-        </nav>
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        <header className="h-[60px] bg-[#161B22] border-b border-[var(--border-default)] flex items-center justify-between px-6 shrink-0 z-40 shadow-md">
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-start">
+              <span className="text-[10px] text-[var(--text-sec)] font-mono uppercase">NYXAR</span>
+              <span className="text-xs text-[var(--color-primary)] uppercase tracking-widest font-mono">
+                SOC Central Dashboard
+              </span>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-6">
-           <div className="flex flex-col items-end">
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-end">
               <span className="text-[10px] text-[var(--text-sec)] font-mono uppercase">Eventos/min</span>
               <span className="text-sm font-bold">{stats?.eventos_por_min || 0}</span>
-           </div>
-           <div className="flex flex-col items-end">
+            </div>
+            <div className="flex flex-col items-end">
               <span className="text-[10px] text-[var(--text-sec)] font-mono uppercase">Alertas Activas</span>
               <span className="text-sm font-bold text-[var(--color-critical)]">{stats?.alertas_abiertas || 0}</span>
-           </div>
-           <div className="flex items-center gap-2 border-l border-[#21262D] pl-4">
+            </div>
+            <div className="flex items-center gap-2 border-l border-[#21262D] pl-4">
               <StatusDot status="online" />
               <span className="text-xs text-[var(--text-sec)]">WS Conectado</span>
-           </div>
-        </div>
-      </header>
+            </div>
+          </div>
+        </header>
 
-      {/* Area de Contenido */}
-      <main className="flex-1 overflow-hidden relative p-6">
-        <Suspense fallback={<LoadingView />}>
-           {activeTab === 'map' && <NetworkMap />}
-           {activeTab === 'timeline' && <Timeline />}
-           {activeTab === 'identities' && <Identities />}
+        <main className="flex-1 overflow-hidden relative p-6 min-h-0">
+          <Suspense fallback={<LoadingView />}>
+            {activeTab === 'map' && <NetworkMap />}
+            {activeTab === 'timeline' && <Timeline />}
+            {activeTab === 'identities' && <Identities />}
+          </Suspense>
+        </main>
+
+        <Suspense fallback={null}>
+          <AttackInjector isLabMode={isLabMode || true} identities={identities} />
         </Suspense>
-      </main>
-
-      {/* Inyector Flotante condicional */}
-      <Suspense fallback={null}>
-         <AttackInjector isLabMode={isLabMode || true} identities={identities} /> {/* Forzado provisional hasta conectar vars reales de entorno */}
-      </Suspense>
+      </div>
     </div>
-  );
+  )
 }

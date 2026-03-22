@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NYXAR  variante con wordmark [ NYXAR ] (monospace, corchetes en cian).
+  Para splash, favicon detallado o materiales donde no haya texto duplicado en la UI.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" role="img" aria-label="NYXAR">
+  <defs>
+    <filter id="nyxar-node-glow-full" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <g transform="translate(0 -6)">
+    <polygon
+      fill="none"
+      stroke="#6b7f94"
+      stroke-width="1.15"
+      stroke-linejoin="round"
+      points="50,21 69.92,32.5 69.92,55.5 50,67 30.08,55.5 30.08,32.5"
+    />
+    <circle cx="50" cy="21" r="2.35" fill="#6b7f94" />
+    <circle cx="69.92" cy="32.5" r="2.55" fill="#38b2cc" filter="url(#nyxar-node-glow-full)" />
+    <circle cx="69.92" cy="55.5" r="2.35" fill="#6b7f94" />
+    <circle cx="50" cy="67" r="2.35" fill="#6b7f94" />
+    <circle cx="30.08" cy="55.5" r="2.35" fill="#6b7f94" />
+    <circle cx="30.08" cy="32.5" r="2.35" fill="#6b7f94" />
+  </g>
+  <text
+    x="50"
+    y="108"
+    text-anchor="middle"
+    font-family="JetBrains Mono, ui-monospace, Consolas, monospace"
+    font-size="11.5"
+    letter-spacing="0.06em"
+  >
+    <tspan fill="#38b2cc">[</tspan>
+    <tspan fill="#e6edf3"> NYXAR </tspan>
+    <tspan fill="#38b2cc">]</tspan>
+  </text>
+</svg>

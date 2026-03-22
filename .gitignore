@@ -8,4 +8,6 @@ dist/
 .env
 .nyxar_state
 venv/
+.venv/
 env/
+.cursor/
