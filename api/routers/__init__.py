@@ -4,6 +4,7 @@ from . import incidents
 from . import alerts
 from . import simulator
 from . import ai
+from . import response_proposals
 
 __all__ = [
     "events",
@@ -11,5 +12,6 @@ __all__ = [
     "incidents",
     "alerts",
     "simulator",
-    "ai"
+    "ai",
+    "response_proposals",
 ]

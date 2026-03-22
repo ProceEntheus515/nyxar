@@ -46,8 +46,8 @@ class CorrelatorEngine:
             
             logger.critical(f"ALERTA GENERADA - Host: {inc.host_afectado} | Patron: {inc.patron} | Severidad: {inc.severidad} | Mitre: {inc.mitre_technique}")
 
-            # 2. Publicar al bus Redis events:alerts
-            await self.redis_bus.publish_alert(inc.model_dump(mode="json")) # Envio para Sockets y Webs
+            # 2. Publicar al canal que consume api/websocket (redis_listener)
+            await self.redis_bus.publish_alert("alerts", inc.model_dump(mode="json"))
             
             # 3. Guardar permanente en MongoDB
             inc_dict = inc.model_dump(mode="json")

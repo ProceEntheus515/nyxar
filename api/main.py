@@ -11,7 +11,7 @@ from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
 
 # Routers
-from api.routers import events, identities, incidents, alerts, simulator, ai
+from api.routers import events, identities, incidents, alerts, simulator, ai, response_proposals
 
 logger = get_logger("api.main")
 
@@ -73,6 +73,7 @@ app.include_router(identities.router, prefix="/api/v1")
 app.include_router(incidents.router, prefix="/api/v1")
 app.include_router(alerts.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
+app.include_router(response_proposals.router, prefix="/api/v1")
 
 if os.getenv("LAB_MODE", "false").lower() == "true":
     app.include_router(simulator.router, prefix="/api/v1")

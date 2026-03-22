@@ -1,0 +1,4 @@
+motor
+httpx
+redis
+pydantic

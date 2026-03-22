@@ -119,7 +119,7 @@ class HoneypotManager:
                 "evento_original_id": hit.evento_original_id,
                 "detalles": {"recurso": hit.recurso_tocado, "tipo": hit.tipo_honeypot}
             }
-            await self.redis_bus.publish_alert(alerta_format)
+            await self.redis_bus.publish_alert("alerts", alerta_format)
             
             # 3. Mínimo 85 en Risk Score para el atacante (Direct Mongo Override)
             col = self.mongo_client.db.identities

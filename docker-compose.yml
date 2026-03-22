@@ -136,3 +136,19 @@ services:
     env_file: .env
     networks:
       - cyberpulse-net
+
+  # Opcional: motor SOAR (montar el repo y ejecutar el modulo; habilitar AUTO_RESPONSE_ENABLED en .env)
+  # auto_response:
+  #   image: python:3.11-slim
+  #   working_dir: /app
+  #   volumes:
+  #     - .:/app
+  #   command: python -m auto_response.main
+  #   depends_on:
+  #     mongodb:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   env_file: .env
+  #   networks:
+  #     - cyberpulse-net
