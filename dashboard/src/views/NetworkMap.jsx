@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
 import { useStore } from '../store';
 import { scoreToSeverity, RISK_COLORS } from '../lib/utils';
+import { readCssVar } from '../styles/cssVar';
 import Card from '../components/ui/Card';
 import RiskBadge from '../components/ui/RiskBadge';
 import MonoText from '../components/ui/MonoText';
@@ -17,6 +18,9 @@ export default function NetworkMap() {
     const nodesMap = new Map();
     const linksMap = new Map();
     const now = Date.now();
+    const fallbackMuted = readCssVar('--base-subtle') || 'var(--base-subtle)';
+    const externalFill = readCssVar('--base-border-strong') || 'var(--base-border-strong)';
+    const nodeStroke = readCssVar('--base-deep') || 'var(--base-deep)';
 
     // Nodos Base (Identidades de la empresa)
     Object.values(identities || {}).forEach(id => {
@@ -25,7 +29,7 @@ export default function NetworkMap() {
         type: 'identity',
         data: id,
         radius: Math.max(15, (id.risk_score || 0) / 2 + 10),
-        color: RISK_COLORS[scoreToSeverity(id.risk_score || 0)]?.bg || '#8B949E'
+        color: RISK_COLORS[scoreToSeverity(id.risk_score || 0)]?.bg || fallbackMuted,
       });
     });
 
@@ -45,7 +49,7 @@ export default function NetworkMap() {
           type: 'external',
           data: { label: dstId },
           radius: 8,
-          color: '#21262D' // Gris opaco para internet general
+          color: externalFill,
         });
       }
 
@@ -76,7 +80,8 @@ export default function NetworkMap() {
     
     return {
       nodes: Array.from(nodesMap.values()),
-      links: validLinks
+      links: validLinks,
+      nodeStroke,
     };
   }, [identities, events, alerts]);
 
@@ -101,8 +106,9 @@ export default function NetworkMap() {
     }));
 
     // Datos copiados para simulación porque D3 muta los objetos
-    const nodes = graphData.nodes.map(d => ({...d}));
-    const links = graphData.links.map(d => ({...d}));
+    const nodes = graphData.nodes.map(d => ({ ...d }));
+    const links = graphData.links.map(d => ({ ...d }));
+    const strokeColor = graphData.nodeStroke || readCssVar('--base-deep');
 
     const simulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(links).id(d => d.id).distance(100))
@@ -154,7 +160,7 @@ export default function NetworkMap() {
     nodeGroup.append('circle')
       .attr('r', d => d.radius)
       .attr('fill', d => d.color)
-      .attr('stroke', '#0D1117')
+      .attr('stroke', strokeColor)
       .attr('stroke-width', 2)
       .style('cursor', 'pointer');
 
@@ -167,7 +173,7 @@ export default function NetworkMap() {
       .attr('text-anchor', 'middle')
       .style('fill', 'var(--text-main)')
       .style('font-size', '11px')
-      .style('font-family', 'Inter')
+      .style('font-family', 'var(--font-ui, sans-serif)')
       .style('pointer-events', 'none');
 
     simulation.on('tick', () => {
@@ -197,11 +203,11 @@ export default function NetworkMap() {
         Internal Topology & Connections
       </h2>
       
-      <svg ref={svgRef} className="w-full h-full bg-[#0D1117] rounded-lg border border-[var(--border-default)]" />
+      <svg ref={svgRef} className="w-full h-full bg-[var(--base-deep)] rounded-lg border border-[var(--border-default)]" />
 
       {selectedNode && (
-        <Card className="absolute top-4 right-4 w-[360px] p-0 z-20 flex flex-col shadow-2xl animate-slide-in-right bg-[#161B22]/95 backdrop-blur">
-           <div className="p-4 border-b border-[#21262D] flex justify-between items-start">
+        <Card className="absolute top-4 right-4 w-[360px] p-0 z-20 flex flex-col shadow-2xl animate-slide-in-right bg-[var(--base-surface)]/95 backdrop-blur">
+           <div className="p-4 border-b border-[var(--base-border)] flex justify-between items-start">
              <div>
                <h3 className="font-bold text-white text-[15px]">{selectedNode.nombre_completo}</h3>
                <p className="text-[11px] text-[var(--color-primary)] uppercase tracking-wider mt-1">{selectedNode.area}</p>
@@ -228,7 +234,7 @@ export default function NetworkMap() {
                    <div className="text-xs text-[var(--text-sec)] text-center p-4">Sin actividad reciente</div>
                  ) : (
                    nodeEvents.map(ev => (
-                     <div key={ev.id} className="bg-[#0D1117] p-2 rounded border border-[#21262D] text-xs flex justify-between items-center group">
+                     <div key={ev.id} className="bg-[var(--base-deep)] p-2 rounded border border-[var(--base-border)] text-xs flex justify-between items-center group">
                         <MonoText className="truncate w-2/3">{ev.externo?.valor || ev.source}</MonoText>
                         <span className="text-[10px] text-[var(--text-sec)] shrink-0">{new Date(ev.timestamp).toLocaleTimeString()}</span>
                      </div>
@@ -237,7 +243,7 @@ export default function NetworkMap() {
                </div>
              </div>
              
-             <button className="w-full mt-4 py-2 border border-[#21262D] text-white rounded text-sm hover:bg-[var(--border-default)] transition-colors">
+             <button className="w-full mt-4 py-2 border border-[var(--base-border)] text-white rounded text-sm hover:bg-[var(--border-default)] transition-colors">
                Abrir Reporte Completo
              </button>
            </div>

@@ -112,12 +112,15 @@ export default function SystemHealth() {
         <div className={styles.chartInner}>
           <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="#21262D" strokeDasharray="3 3" />
-            <XAxis dataKey="t" tick={{ fill: '#8B949E', fontSize: 10 }} />
-            <YAxis tick={{ fill: '#8B949E', fontSize: 10 }} allowDecimals={false} />
+            <CartesianGrid stroke="var(--base-border)" strokeDasharray="3 3" />
+            <XAxis dataKey="t" tick={{ fill: 'var(--base-subtle)', fontSize: 10 }} />
+            <YAxis tick={{ fill: 'var(--base-subtle)', fontSize: 10 }} allowDecimals={false} />
             <Tooltip
-              contentStyle={{ background: '#161B22', border: '1px solid #30363d' }}
-              labelStyle={{ color: '#E6EDF3' }}
+              contentStyle={{
+                background: 'var(--base-surface)',
+                border: '1px solid var(--base-border-strong)',
+              }}
+              labelStyle={{ color: 'var(--base-text)' }}
             />
             <Line type="monotone" dataKey="n" stroke="var(--color-primary)" dot={false} strokeWidth={2} />
           </LineChart>

@@ -59,7 +59,7 @@ export default function AttackInjector({ isLabMode, identities = {} }) {
             <div>
               <label className="text-[11px] text-[var(--text-sec)] uppercase tracking-wider">Escenario</label>
               <select 
-                className="w-full mt-1 bg-[#0D1117] border border-[#21262D] rounded p-2 text-sm text-white outline-none focus:border-[var(--color-critical)]"
+                className="w-full mt-1 bg-[var(--base-deep)] border border-[var(--base-border)] rounded p-2 text-sm text-white outline-none focus:border-[var(--color-critical)]"
                 value={scenario}
                 onChange={e => setScenario(e.target.value)}
               >
@@ -74,7 +74,7 @@ export default function AttackInjector({ isLabMode, identities = {} }) {
             <div>
               <label className="text-[11px] text-[var(--text-sec)] uppercase tracking-wider">Target Identidad</label>
               <select 
-                className="w-full mt-1 bg-[#0D1117] border border-[#21262D] rounded p-2 text-sm text-white outline-none focus:border-[var(--color-critical)]"
+                className="w-full mt-1 bg-[var(--base-deep)] border border-[var(--base-border)] rounded p-2 text-sm text-white outline-none focus:border-[var(--color-critical)]"
                 value={target}
                 onChange={e => setTarget(e.target.value)}
               >
@@ -92,7 +92,7 @@ export default function AttackInjector({ isLabMode, identities = {} }) {
                   <button
                     key={lvl}
                     onClick={() => setIntensity(lvl)}
-                    className={`flex-1 py-1 text-xs rounded border ${intensity === lvl ? 'bg-[var(--color-critical)] border-[var(--color-critical)] text-white' : 'border-[#21262D] text-[var(--text-sec)]'}`}
+                    className={`flex-1 py-1 text-xs rounded border ${intensity === lvl ? 'bg-[var(--color-critical)] border-[var(--color-critical)] text-white' : 'border-[var(--base-border)] text-[var(--text-sec)]'}`}
                   >
                     {lvl.toUpperCase()}
                   </button>
@@ -103,14 +103,14 @@ export default function AttackInjector({ isLabMode, identities = {} }) {
             <button
               onClick={handleInject}
               disabled={loading || !target}
-              className="mt-2 w-full flex items-center justify-center gap-2 bg-[var(--color-critical)] hover:bg-[#ff5c6b] text-white py-2 rounded font-semibold text-sm transition-colors disabled:opacity-50"
+              className="mt-2 w-full flex items-center justify-center gap-2 bg-[var(--color-critical)] hover:bg-[var(--critical-bright)] text-white py-2 rounded font-semibold text-sm transition-colors disabled:opacity-50"
             >
               {loading ? 'Preparando payload...' : <><PlayIcon /> Ejecutar Ataque</>}
             </button>
           </div>
 
           {logs.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-[#21262D]">
+            <div className="mt-4 pt-4 border-t border-[var(--base-border)]">
               <h4 className="text-[11px] text-[var(--text-sec)] uppercase mb-2">Últimos inyectados</h4>
               {logs.map(log => (
                 <div key={log.id} className="text-xs text-[var(--color-warning)] mb-1 font-mono">
@@ -124,7 +124,7 @@ export default function AttackInjector({ isLabMode, identities = {} }) {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-[#161B22] border-2 border-[var(--color-critical)] rounded-full flex items-center justify-center text-[var(--color-critical)] hover:bg-[var(--color-critical)] hover:text-white transition-all shadow-lg shadow-red-500/20"
+        className="w-14 h-14 bg-[var(--base-surface)] border-2 border-[var(--color-critical)] rounded-full flex items-center justify-center text-[var(--color-critical)] hover:bg-[var(--color-critical)] hover:text-white transition-all shadow-[var(--shadow-critical)]"
         aria-label="Abrir Inyector de Ataques LAB"
       >
         <TargetIcon />

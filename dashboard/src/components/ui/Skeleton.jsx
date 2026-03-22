@@ -5,7 +5,7 @@ export default function Skeleton({ width = '100%', height = '20px', className = 
   
   return (
     <div
-      className={`shimmer-effect bg-[#21262D] ${className}`}
+      className={`shimmer-effect bg-[var(--base-border-strong)] ${className}`}
       style={{
         width,
         height,

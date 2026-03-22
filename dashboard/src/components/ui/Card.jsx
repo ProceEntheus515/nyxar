@@ -7,7 +7,7 @@ export default function Card({ children, className = '', glow = false, glowColor
 
   return (
     <div
-      className={`bg-[#161B22] border border-[#21262D] rounded-[8px] hover:bg-[#1A2030] transition-colors duration-200 overflow-hidden ${className}`}
+      className={`bg-[var(--base-surface)] border border-[var(--base-border)] rounded-[var(--radius-md)] hover:bg-[var(--base-raised)] transition-colors duration-200 overflow-hidden ${className}`}
       style={glowStyle}
     >
       {children}

@@ -1,70 +1,40 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Alias legacy → tokens (tokens.css es la fuente de verdad).
+ * Preferir en código nuevo: var(--base-*), var(--cyan-*), etc.
+ */
 :root {
-  --bg-main: #0D1117;
-  --bg-card: #161B22;
-  --bg-card-hover: #1A2030;
-  --border-default: #21262D;
-  --text-main: #E6EDF3;
-  --text-sec: #8B949E;
-  
-  --color-primary: #00D4FF;
-  --color-success: #00FF88;
-  --color-critical: #FF4757;
-  --color-warning: #FFA502;
-  --color-media: #FFDD57;
-  --color-baja: #7BED9F;
-  --color-info: #7B68EE;
+  --bg-main: var(--base-deep);
+  --bg-card: var(--base-surface);
+  --bg-card-hover: var(--base-raised);
+  --border-default: var(--base-border);
+  --text-main: var(--base-text);
+  --text-sec: var(--base-subtle);
 
-  /* Tokens compartidos: Sidebar / About (alineados al prompt de identidad) */
-  --font-data: 'JetBrains Mono', ui-monospace, monospace;
-  --font-ui: 'Inter', system-ui, sans-serif;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --radius-sm: 4px;
-  --radius-lg: 12px;
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-md: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --weight-semibold: 600;
-  --weight-bold: 700;
-  --tracking-wide: 0.025em;
-  --tracking-wider: 0.05em;
-  --leading-normal: 1.5;
-  --base-surface: var(--bg-card);
-  --base-border: var(--border-default);
-  --base-border-strong: #30363d;
-  --base-bright: var(--text-main);
-  --base-muted: var(--text-sec);
-  --base-subtle: #9ca3af;
-  --base-soft: #c9d1d9;
-  --cyan-base: #38b2cc;
-  --cyan-bright: #38b2cc;
-  --cyan-dim: rgba(56, 178, 204, 0.08);
-  --cyan-border: rgba(56, 178, 204, 0.28);
-  --cyan-soft: #7dd3e8;
-  --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.45);
+  --color-primary: var(--cyan-base);
+  --color-success: var(--clean-base);
+  --color-critical: var(--critical-base);
+  --color-warning: var(--high-base);
+  --color-media: var(--medium-base);
+  --color-baja: var(--clean-muted);
+  --color-info: var(--info-base);
+
+  /* Modal legacy (componentes que esperaban z-index muy alto) */
   --z-modal: 5000;
 }
 
+html {
+  background-color: var(--base-void);
+}
+
 body {
-  background-color: var(--bg-main);
-  color: var(--text-main);
-  font-family: 'Inter', sans-serif;
+  background-color: var(--base-deep);
+  color: var(--base-text);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
@@ -86,41 +56,37 @@ body {
   box-sizing: border-box;
 }
 
-/* Custom Scrollbar - thin & dark */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-main);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-default);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-sec);
-}
-
-/* Animations */
+/* Animaciones: colores alineados a tokens (--critical-*, --high-*), sin rojo/naranja genérico */
 @keyframes pulse-critical {
-  0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(255, 71, 87, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--critical-base) 45%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--critical-base) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--critical-base) 0%, transparent);
+  }
 }
 
 @keyframes pulse-warning {
-  0% { box-shadow: 0 0 0 0 rgba(255, 165, 2, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(255, 165, 2, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 165, 2, 0); }
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--high-base) 45%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--high-base) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--high-base) 0%, transparent);
+  }
 }
 
 .animate-pulse-critical {
-  animation: pulse-critical 2s infinite;
+  animation: pulse-critical 1.75s infinite;
 }
 
 .animate-pulse-warning {
-  animation: pulse-warning 2s infinite;
+  animation: pulse-warning 1.75s infinite;
 }
 
 @keyframes fadeIn {
@@ -159,11 +125,12 @@ body {
   right: 0;
   bottom: 0;
   left: 0;
+  /* Un solo matiz (--base-bright); extremos transparentes vía color-mix */
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.05) 50%,
-    rgba(255, 255, 255, 0) 100%
+    color-mix(in srgb, var(--base-bright) 0%, transparent) 0%,
+    color-mix(in srgb, var(--base-bright) 8%, transparent) 50%,
+    color-mix(in srgb, var(--base-bright) 0%, transparent) 100%
   );
   animation: shimmer 1.5s infinite;
 }

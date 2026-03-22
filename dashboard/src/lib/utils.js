@@ -1,9 +1,9 @@
 export const RISK_COLORS = {
-  critica: { bg: 'var(--color-critical)', text: '#FFFFFF', label: 'CRÍTICA' },
-  alta:    { bg: 'var(--color-warning)', text: '#000000', label: 'ALTA' },
-  media:   { bg: 'var(--color-media)', text: '#000000', label: 'MEDIA' },
-  baja:    { bg: 'var(--color-baja)', text: '#000000', label: 'BAJA' },
-  info:    { bg: 'var(--color-info)', text: '#FFFFFF', label: 'INFO' },
+  critica: { bg: 'var(--color-critical)', text: 'var(--base-bright)', label: 'CRÍTICA' },
+  alta: { bg: 'var(--color-warning)', text: 'var(--base-deep)', label: 'ALTA' },
+  media: { bg: 'var(--color-media)', text: 'var(--base-deep)', label: 'MEDIA' },
+  baja: { bg: 'var(--color-baja)', text: 'var(--base-deep)', label: 'BAJA' },
+  info: { bg: 'var(--color-info)', text: 'var(--base-bright)', label: 'INFO' },
 }
 
 export const scoreToSeverity = (score) => {

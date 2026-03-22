@@ -6,7 +6,7 @@ const SIZE_MAP = {
 };
 
 export default function StatusDot({ status = 'online', size = 'sm' }) {
-  let bg = 'bg-[#8B949E]';
+  let bg = 'bg-[var(--base-subtle)]';
   let animate = '';
 
   if (status === 'online') {
@@ -18,7 +18,7 @@ export default function StatusDot({ status = 'online', size = 'sm' }) {
     bg = 'bg-[var(--color-critical)]';
     animate = 'animate-pulse-critical';
   } else if (status === 'offline' || status === 'unknown') {
-    bg = 'bg-[#8B949E]';
+    bg = 'bg-[var(--base-subtle)]';
   }
 
   const dim = SIZE_MAP[size] || SIZE_MAP.sm;

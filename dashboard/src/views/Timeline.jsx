@@ -100,7 +100,7 @@ function TimelineRow({ index, style, ariaAttributes, filteredEvents, alerts }) {
         </p>
 
         {isIncident && (
-          <div className="mt-2 text-xs text-[var(--color-critical)] rounded bg-[#FF4757]/10 p-2 border border-[var(--color-critical)]">
+          <div className="mt-2 text-xs text-[var(--color-critical)] rounded bg-[var(--critical-bg)] p-2 border border-[var(--color-critical)]">
             {incidentData.descripcion}
           </div>
         )}

@@ -64,7 +64,7 @@ export default function App() {
         {healthGeneral === 'critico' ? (
           <CriticalHealthBanner mensaje={healthReport?.resumen} />
         ) : null}
-        <header className="h-[60px] bg-[#161B22] border-b border-[var(--border-default)] flex items-center justify-between px-6 shrink-0 z-40 shadow-md">
+        <header className="h-[60px] bg-[var(--base-surface)] border-b border-[var(--border-default)] flex items-center justify-between px-6 shrink-0 z-40 shadow-md">
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-start">
               <span className="text-[10px] text-[var(--text-sec)] font-mono uppercase">NYXAR</span>
@@ -83,7 +83,7 @@ export default function App() {
               <span className="text-[10px] text-[var(--text-sec)] font-mono uppercase">Alertas Activas</span>
               <span className="text-sm font-bold text-[var(--color-critical)]">{stats?.alertas_abiertas || 0}</span>
             </div>
-            <div className="flex items-center gap-2 border-l border-[#21262D] pl-4">
+            <div className="flex items-center gap-2 border-l border-[var(--base-border)] pl-4">
               <StatusDot status="online" />
               <span className="text-xs text-[var(--text-sec)]">WS Conectado</span>
             </div>

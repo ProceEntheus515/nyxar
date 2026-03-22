@@ -53,7 +53,7 @@ export default function Identities() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#21262D] flex items-center justify-center font-bold text-white shadow-inner">
+                    <div className="w-10 h-10 rounded-full bg-[var(--base-border-strong)] flex items-center justify-center font-bold text-white shadow-inner">
                       {getInitials(id.nombre_completo)}
                     </div>
                     <div>
@@ -67,7 +67,7 @@ export default function Identities() {
                   <RiskBadge score={id.risk_score || 0} severidad={scoreToSeverity(id.risk_score || 0)} />
                 </div>
                 
-                <div className="bg-[#0D1117] p-2 rounded border border-[#21262D] mb-3 flex items-center justify-between">
+                <div className="bg-[var(--base-deep)] p-2 rounded border border-[var(--base-border)] mb-3 flex items-center justify-between">
                    <MonoText className="text-[11px]">{id.dispositivo || 'Unknown-Device'}</MonoText>
                    <MonoText className="text-[11px] opacity-70">{id.hostname || 'Unknown-Host'}</MonoText>
                 </div>
@@ -83,7 +83,7 @@ export default function Identities() {
                   </div>
                   
                   {id.delta_2h !== undefined && (
-                    <div className="flex flex-col items-center justify-center bg-[#0D1117] px-2 py-1 rounded">
+                    <div className="flex flex-col items-center justify-center bg-[var(--base-deep)] px-2 py-1 rounded">
                       <span className="text-[10px] text-[var(--text-sec)]">Δ 2H</span>
                       <span className={`text-xs font-bold ${hasRaised ? 'text-[var(--color-critical)]' : 'text-[var(--color-success)]'}`}>
                         {hasRaised ? '↑' : '↓'} {Math.abs(id.delta_2h)}
@@ -99,7 +99,7 @@ export default function Identities() {
 
       {selectedId && (
         <Card className="w-1/3 min-w-[350px] p-0 flex flex-col h-[calc(100vh-100px)] animate-slide-in-right sticky top-0">
-           <div className="p-4 border-b border-[#21262D] flex justify-between items-center bg-[#0D1117]/50">
+           <div className="p-4 border-b border-[var(--base-border)] flex justify-between items-center bg-[var(--base-deep)]/50">
              <h3 className="font-bold text-white">Identity Dossier</h3>
              <button onClick={() => setSelectedId(null)} className="text-[var(--text-sec)] hover:text-white">✕</button>
            </div>
@@ -107,7 +107,7 @@ export default function Identities() {
            <div className="p-4 overflow-y-auto flex-1">
              <div className="mb-6">
                 <h4 className="text-[11px] uppercase tracking-wider text-[var(--text-sec)] mb-2">Comportamiento Habitual (Baseline)</h4>
-                <div className="bg-[#0D1117] p-3 rounded text-sm space-y-2 border border-[#21262D]">
+                <div className="bg-[var(--base-deep)] p-3 rounded text-sm space-y-2 border border-[var(--base-border)]">
                   <p><strong>Horas Activas:</strong> 09:00 - 18:00 hs</p>
                   <p><strong>Volumen Promedio:</strong> ~125 MB/día</p>
                   <p><strong>Servidores Típicos:</strong> 3 detectados</p>
@@ -117,8 +117,8 @@ export default function Identities() {
              <div>
                <h4 className="text-[11px] uppercase tracking-wider text-[var(--text-sec)] mb-2">Desviaciones Críticas</h4>
                <div className="border border-[var(--color-critical)] rounded p-3 bg-[var(--color-critical)]/10 text-sm">
-                 <p className="text-[#FF4757]">⚠ Volumen excedió el 500% hace 1 hora.</p>
-                 <p className="text-[#FF4757]">⚠ Dominio anómalo contactado 41 veces.</p>
+                 <p className="text-[var(--color-critical)]">⚠ Volumen excedió el 500% hace 1 hora.</p>
+                 <p className="text-[var(--color-critical)]">⚠ Dominio anómalo contactado 41 veces.</p>
                </div>
              </div>
            </div>

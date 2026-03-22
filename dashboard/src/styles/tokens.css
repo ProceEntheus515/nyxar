@@ -1,0 +1,186 @@
+/* Fuentes Geist: @fontsource en main.jsx (antes de este archivo). */
+
+/* ═══════════════════════════════════════════════════════════
+   NYXAR — DESIGN TOKENS
+   Operational Intelligence Interface
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+
+  /* ─── ESPACIOS (sistema 4pt) ──────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ─── COLORES BASE (no usar directamente en componentes) ─ */
+  --base-void: #080B0F;          /* el vacío — fondo más profundo */
+  --base-deep: #0C1018;          /* fondo principal de la app */
+  --base-surface: #111620;       /* cards y paneles */
+  --base-raised: #161D2E;        /* elementos elevados sobre surface */
+  --base-overlay: #1C2438;       /* tooltips, dropdowns, modales */
+  --base-border: #1F2B40;        /* bordes sutiles */
+  --base-border-strong: #2A3A55; /* bordes de énfasis */
+  --base-muted: #3D4F6A;         /* texto deshabilitado, placeholders */
+  --base-subtle: #6B7FA0;        /* texto secundario */
+  --base-soft: #A8B8D0;          /* texto terciario */
+  --base-text: #D8E4F0;          /* texto principal */
+  --base-bright: #EDF3FA;        /* texto de énfasis */
+
+  /* ─── ACENTO PRIMARIO: Cyan operacional ─────────────────
+     No es el cyan neón de películas de hacking.
+     Es el cyan de monitores de control de misión.
+     Frío, preciso, confiable.                              */
+  --cyan-dim: #0A2535;           /* background de badges cyan */
+  --cyan-muted: #0D3347;         /* hover states suaves */
+  --cyan-border: #1A5E7A;        /* bordes de elementos cyan */
+  --cyan-soft: #2B8FAD;          /* cyan desaturado para texto */
+  --cyan-base: #38B2CC;          /* cyan principal — uso moderado */
+  --cyan-bright: #4FC3D9;        /* cyan de énfasis */
+  --cyan-glow: #67D4E8;          /* cyan para elementos activos */
+
+  /* ─── ESTADOS SEMÁNTICOS ─────────────────────────────── */
+  /* Crítico: no el rojo de error genérico.
+     El rojo de "esto requiere atención ahora." */
+  --critical-bg: #1A0A0E;
+  --critical-border: #5C1A24;
+  --critical-muted: #8B3040;
+  --critical-base: #C23B52;
+  --critical-bright: #E8455F;
+
+  /* Alto: naranja de advertencia industrial */
+  --high-bg: #160E05;
+  --high-border: #4A2C0A;
+  --high-muted: #7A4A14;
+  --high-base: #B8692A;
+  --high-bright: #D97F3A;
+
+  /* Medio: amarillo-ámbar (no amarillo chillón) */
+  --medium-bg: #141006;
+  --medium-border: #3D2E08;
+  --medium-muted: #6B4E10;
+  --medium-base: #A07020;
+  --medium-bright: #C08A28;
+
+  /* Limpio: verde de "sistema operando nominalmente" */
+  --clean-bg: #080E0A;
+  --clean-border: #0F3018;
+  --clean-muted: #1A5428;
+  --clean-base: #2A8040;
+  --clean-bright: #38A050;
+
+  /* Info: azul frío para datos neutrales */
+  --info-bg: #080E1A;
+  --info-border: #0F2040;
+  --info-muted: #1A3A6A;
+  --info-base: #2A5C9E;
+  --info-bright: #3872B8;
+
+  /* ─── RISK SCORE GRADIENT ────────────────────────────────
+     Para el risk score (0-100) usar interpolación entre estos puntos.
+     No usar colores planos — el gradiente comunica urgencia graduada. */
+  --risk-0: #2A8040;    /* 0 */
+  --risk-25: #A07020;   /* 25 */
+  --risk-50: #B8692A;   /* 50 */
+  --risk-75: #C23B52;   /* 75 */
+  --risk-100: #E8455F;  /* 100 */
+
+  /* ─── TIPOGRAFÍA ─────────────────────────────────────── */
+  --font-ui: 'Geist Sans', system-ui, sans-serif;
+  --font-data: 'Geist Mono', ui-monospace, monospace;
+
+  --text-xs: 11px;       /* labels, badges, metadata */
+  --text-sm: 13px;       /* texto secundario */
+  --text-base: 14px;     /* texto de interfaz principal */
+  --text-md: 15px;       /* texto de contenido */
+  --text-lg: 18px;       /* títulos de sección */
+  --text-xl: 22px;       /* títulos de vista */
+  --text-2xl: 28px;      /* hero numbers */
+  --text-3xl: 36px;      /* métricas grandes */
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.4;
+  --leading-normal: 1.6;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.08em;    /* para labels en mayúsculas */
+
+  /* ─── BORDES Y RADIOS ────────────────────────────────── */
+  --radius-sm: 3px;      /* badges, chips pequeños */
+  --radius-md: 6px;      /* cards, inputs */
+  --radius-lg: 10px;     /* paneles principales */
+  --radius-full: 9999px; /* pills */
+
+  --border-width: 1px;
+  --border-width-strong: 1.5px;
+
+  /* ─── ELEVACIÓN (sombras) ──────────────────────────────
+     Las sombras comunican elevación — no son decorativas.
+     Usar azul oscuro, no negro puro (más natural en dark themes). */
+  --shadow-sm: 0 1px 3px rgba(4, 8, 16, 0.4);
+  --shadow-md: 0 4px 12px rgba(4, 8, 16, 0.5), 0 1px 3px rgba(4, 8, 16, 0.3);
+  --shadow-lg: 0 8px 24px rgba(4, 8, 16, 0.6), 0 2px 8px rgba(4, 8, 16, 0.4);
+  --shadow-cyan: 0 0 0 1px var(--cyan-border), 0 4px 16px rgba(56, 178, 204, 0.08);
+  --shadow-critical: 0 0 0 1px var(--critical-border), 0 4px 16px rgba(194, 59, 82, 0.1);
+
+  /* ─── TRANSICIONES ──────────────────────────────────── */
+  --duration-instant: 80ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ─── LAYOUT ─────────────────────────────────────────── */
+  --nav-width: 220px;
+  --nav-width-collapsed: 56px;
+  --panel-width: 360px;
+  --header-height: 48px;
+  --status-bar-height: 28px;
+
+  /* ─── Z-INDEX ─────────────────────────────────────────── */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+}
+
+/* ─── SCROLLBAR PERSONALIZADA ────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--base-border-strong);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--base-muted); }
+
+/* ─── SELECCIÓN DE TEXTO ─────────────────────────────────── */
+::selection {
+  background: var(--cyan-dim);
+  color: var(--cyan-glow);
+}
+
+/* ─── FOCUS RING ──────────────────────────────────────────── */
+:focus-visible {
+  outline: 1.5px solid var(--cyan-base);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

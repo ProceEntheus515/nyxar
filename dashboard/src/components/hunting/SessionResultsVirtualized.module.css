@@ -85,6 +85,6 @@
 .qref {
   margin: 6px 0 0;
   font-size: 10px;
-  color: var(--cyan-soft, #7dd3e8);
+  color: var(--cyan-soft);
   opacity: 0.9;
 }
