@@ -8,6 +8,7 @@ import anthropic
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
+from shared.heartbeat import heartbeat_loop
 
 logger = get_logger("ai.autonomous")
 
@@ -31,6 +32,9 @@ class AutonomousAnalyst:
     async def run(self) -> None:
         """Loop infinito que corre el análisis cada ANALYSIS_INTERVAL segundos"""
         self._running = True
+        await self.mongo.connect()
+        await self.redis_bus.connect()
+        asyncio.create_task(heartbeat_loop(self.redis_bus, "ai_analyst"), name="ai_analyst-hb")
         logger.info(f"iniciando AutonomousAnalyst. Intervalo: {self.ANALYSIS_INTERVAL}s")
         await asyncio.sleep(60) # Demora en arrancar para permitir que haya data viva
         while self._running:

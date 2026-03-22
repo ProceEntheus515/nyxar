@@ -5,6 +5,7 @@ import signal
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
+from shared.heartbeat import heartbeat_loop
 
 # Modulos
 from collector.parsers.dns_parser import DnsParser
@@ -20,6 +21,7 @@ async def main():
     await redis_bus.connect()
     mongo_client = MongoClient()
     await mongo_client.connect()
+    asyncio.create_task(heartbeat_loop(redis_bus, "collector"), name="collector-hb")
     
     # Rutas por defecto del host, pueden venir de .env
     pihole_path = os.getenv("LOG_DNS_PATH", "/logs/dns/pihole.log")

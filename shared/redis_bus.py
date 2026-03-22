@@ -91,6 +91,20 @@ class RedisBus:
             await self.client.xack(stream, group, *ids)
         await self._retry_operation(op)
 
+    async def stream_length(self, stream: str) -> int:
+        """Longitud aproximada del stream (XLEN); 0 si no existe o sin cliente."""
+
+        async def op():
+            return int(await self.client.xlen(stream))
+
+        if not self.client:
+            return 0
+        try:
+            return await self._retry_operation(op)
+        except Exception as e:
+            logger.warning("stream_length %s: %s", stream, e)
+            return 0
+
     # --- CACHÉ ---
 
     async def cache_get(self, key: str) -> Optional[dict]:

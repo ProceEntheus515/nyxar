@@ -1,0 +1,6 @@
+aiosmtplib
+httpx
+jinja2
+motor
+pydantic
+redis

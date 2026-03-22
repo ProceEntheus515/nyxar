@@ -114,6 +114,37 @@ services:
     networks:
       - nyxar-net
 
+  observability:
+    build:
+      context: .
+      dockerfile: observability/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - nyxar-net
+
+  # Worker sin puerto HTTP: email/WhatsApp según NOTIFY_* en .env
+  notifier:
+    build:
+      context: .
+      dockerfile: notifier/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - nyxar-net
+
   simulator:
     build: ./simulator
     restart: unless-stopped

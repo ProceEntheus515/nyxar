@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
+from shared.heartbeat import heartbeat_loop
 
 # Routers
 from api.routers import events, identities, incidents, alerts, simulator, ai, response, response_proposals, hunting, notifications
@@ -50,15 +51,19 @@ async def lifespan(app: FastAPI):
                 logger.warning("APPROVAL expire poll: %s", e)
             await asyncio.sleep(poll_s)
 
+    hb_task = asyncio.create_task(heartbeat_loop(redis_bus, "api"), name="api-hb")
     expire_task = asyncio.create_task(approval_expire_poll())
 
     yield
 
-    expire_task.cancel()
-    try:
-        await expire_task
-    except asyncio.CancelledError:
-        pass
+    for t in (hb_task, expire_task):
+        t.cancel()
+        try:
+            await t
+        except asyncio.CancelledError:
+            pass
+    await redis_bus.disconnect()
+    await mongo_client.disconnect()
     logger.info("API apagada.")
 
 app = FastAPI(

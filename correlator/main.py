@@ -5,6 +5,7 @@ from typing import Optional, List
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
 from shared.mongo_client import MongoClient
+from shared.heartbeat import heartbeat_loop
 from api.models import Evento
 
 from correlator.baseline import BaselineManager
@@ -119,31 +120,42 @@ class CorrelatorEngine:
         logger.info(f"Conectando CorrelatorEngine (Consumer: {self.consumer_name})...")
         await self.redis_bus.connect()
         await self.mongo_client.connect()
-        
-        while True:
-            try:
-                # Enriched Stream Consumer
-                eventos = await self.redis_bus.consume_events(
-                    self.redis_bus.STREAM_ENRICHED,
-                    self.group_name,
-                    self.consumer_name,
-                    count=20
-                )
-                
-                if not eventos:
-                    await asyncio.sleep(0.1)
-                    continue
-                    
-                ops = [self._procesar_evento(mid, raw) for mid, raw in eventos]
-                procesados = await asyncio.gather(*ops, return_exceptions=True)
-                
-                acks = [p for p in procesados if isinstance(p, bytes)]
-                if acks:
-                    await self.redis_bus.acknowledge(self.redis_bus.STREAM_ENRICHED, self.group_name, acks)
+        hb_task = asyncio.create_task(heartbeat_loop(self.redis_bus, "correlator"), name="correlator-hb")
 
-            except Exception as e:
-                logger.error(f"Loop error Correlator: {e}")
-                await asyncio.sleep(2)
+        try:
+            while True:
+                try:
+                    eventos = await self.redis_bus.consume_events(
+                        self.redis_bus.STREAM_ENRICHED,
+                        self.group_name,
+                        self.consumer_name,
+                        count=20,
+                    )
+
+                    if not eventos:
+                        await asyncio.sleep(0.1)
+                        continue
+
+                    ops = [self._procesar_evento(mid, raw) for mid, raw in eventos]
+                    procesados = await asyncio.gather(*ops, return_exceptions=True)
+
+                    acks = [p for p in procesados if isinstance(p, bytes)]
+                    if acks:
+                        await self.redis_bus.acknowledge(
+                            self.redis_bus.STREAM_ENRICHED, self.group_name, acks
+                        )
+
+                except Exception as e:
+                    logger.error(f"Loop error Correlator: {e}")
+                    await asyncio.sleep(2)
+        finally:
+            hb_task.cancel()
+            try:
+                await hb_task
+            except asyncio.CancelledError:
+                pass
+            await self.redis_bus.disconnect()
+            await self.mongo_client.disconnect()
 
 if __name__ == "__main__":
     app = CorrelatorEngine()

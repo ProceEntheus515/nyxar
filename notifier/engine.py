@@ -19,6 +19,7 @@ from notifier.preferences_manager import PreferencesManager
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
+from shared.heartbeat import heartbeat_loop
 
 logger = get_logger("notifier.engine")
 
@@ -546,6 +547,7 @@ class NotificationEngine:
         self._load_recipients()
 
         tasks = [
+            asyncio.create_task(heartbeat_loop(self.redis_bus, "notifier"), name="notif-hb"),
             asyncio.create_task(self._pubsub_loop(), name="notif-pubsub"),
             asyncio.create_task(self._watch_collection("incidents", "insert", "update"), name="notif-incidents"),
             asyncio.create_task(self._watch_honeypots(), name="notif-honeypot"),

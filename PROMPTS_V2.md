@@ -2390,12 +2390,12 @@ NO HAGAS:
 
 ---
 
-## 📡 MÓDULO OBSERVABILIDAD
+## MÓDULO OBSERVABILIDAD
 
 ---
 
 ### PROMPT V17 — DevOps Engineer
-**Rol:** 📡 DevOps / SRE Engineer  
+**Rol:** DevOps / SRE Engineer  
 **Componente:** Métricas internas y health checks  
 **Entregable:** `observability/metrics.py` y `observability/collectors/`
 

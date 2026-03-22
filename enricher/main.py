@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
 from shared.mongo_client import MongoClient
+from shared.heartbeat import heartbeat_loop
 from api.models import Evento, Enrichment
 
 from ad_connector.resolver import IdentityResolver
@@ -213,6 +214,7 @@ class EnrichmentEngine:
 
         # Lanzar paralelamente el scheduler de listas en este mismo worker
         asyncio.create_task(self.feeds.start_scheduler())
+        hb_task = asyncio.create_task(heartbeat_loop(self.redis_bus, "enricher"), name="enricher-hb")
 
         try:
             while True:
@@ -255,6 +257,11 @@ class EnrichmentEngine:
                     logger.error(f"Error loop principal Enricher: {e}")
                     await asyncio.sleep(2)
         finally:
+            hb_task.cancel()
+            try:
+                await hb_task
+            except asyncio.CancelledError:
+                pass
             await self.redis_bus.disconnect()
             await self.mongo_client.disconnect()
 
