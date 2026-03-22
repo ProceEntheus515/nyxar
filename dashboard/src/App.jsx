@@ -4,6 +4,7 @@ import { useStore } from './store'
 import Skeleton from './components/ui/Skeleton'
 import StatusDot from './components/ui/StatusDot'
 import { Sidebar } from './components/layout/Sidebar'
+import CriticalHealthBanner from './components/health/CriticalHealthBanner'
 
 import { MOCK_DATA } from './lib/mock'
 
@@ -23,6 +24,7 @@ const Timeline = React.lazy(() => import('./views/Timeline'))
 const Identities = React.lazy(() => import('./views/Identities'))
 const HuntingView = React.lazy(() => import('./views/HuntingView'))
 const AttackInjector = React.lazy(() => import('./views/AttackInjector'))
+const SystemHealth = React.lazy(() => import('./views/SystemHealth'))
 
 function LoadingView() {
   return (
@@ -39,7 +41,7 @@ function LoadingView() {
 export default function App() {
   useWebSocket()
 
-  const { isLabMode, identities, stats, setInitialState } = useStore()
+  const { isLabMode, identities, stats, setInitialState, healthGeneral, healthReport } = useStore()
   const [activeTab, setActiveTab] = useState('map')
 
   useEffect(() => {
@@ -52,9 +54,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex overflow-hidden">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        healthCritical={healthGeneral === 'critico'}
+      />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        {healthGeneral === 'critico' ? (
+          <CriticalHealthBanner mensaje={healthReport?.resumen} />
+        ) : null}
         <header className="h-[60px] bg-[#161B22] border-b border-[var(--border-default)] flex items-center justify-between px-6 shrink-0 z-40 shadow-md">
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-start">
@@ -87,6 +96,7 @@ export default function App() {
             {activeTab === 'timeline' && <Timeline />}
             {activeTab === 'identities' && <Identities />}
             {activeTab === 'hunting' && <HuntingView onNavigate={setActiveTab} />}
+            {activeTab === 'health' && <SystemHealth />}
           </Suspense>
         </main>
 

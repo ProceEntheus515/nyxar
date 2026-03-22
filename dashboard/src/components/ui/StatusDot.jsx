@@ -1,7 +1,12 @@
 import React from 'react';
 
-export default function StatusDot({ status = 'online' }) {
-  let bg = 'bg-[#8B949E]'; // default / offline
+const SIZE_MAP = {
+  sm: 'w-2.5 h-2.5',
+  lg: 'w-4 h-4 min-w-[1rem] min-h-[1rem]',
+};
+
+export default function StatusDot({ status = 'online', size = 'sm' }) {
+  let bg = 'bg-[#8B949E]';
   let animate = '';
 
   if (status === 'online') {
@@ -12,12 +17,16 @@ export default function StatusDot({ status = 'online' }) {
   } else if (status === 'critical') {
     bg = 'bg-[var(--color-critical)]';
     animate = 'animate-pulse-critical';
+  } else if (status === 'offline' || status === 'unknown') {
+    bg = 'bg-[#8B949E]';
   }
+
+  const dim = SIZE_MAP[size] || SIZE_MAP.sm;
 
   return (
     <div
       aria-label={`Estado actual: ${status}`}
-      className={`w-2.5 h-2.5 rounded-full inline-block ${bg} ${animate}`}
+      className={`${dim} rounded-full inline-block ${bg} ${animate}`}
     />
   );
 }

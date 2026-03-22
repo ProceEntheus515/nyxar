@@ -1,10 +1,12 @@
 import os
 import json
+import uuid
 import asyncio
 from typing import Dict, List
 import socketio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+from observability.health import HealthChecker, compute_events_per_minute_series
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
 from shared.mongo_client import MongoClient
@@ -26,8 +28,14 @@ identity_updates: Dict[str, dict] = {} # buffer de identity risk deltas
 @sio.event
 async def connect(sid, environ):
     logger.info(f"[WS] Cliente conectado: {sid}")
+    try:
+        if mongo_client.db is None:
+            await mongo_client.connect()
+    except Exception as e:
+        logger.error("[WS] No se pudo conectar Mongo al conectar cliente: %s", e)
+        return
     db = mongo_client.db
-    
+
     try:
         # 1. Traer Últimos 10 eventos
         cursor_ev = db.events.find().sort("timestamp", -1).limit(10)
@@ -137,6 +145,8 @@ async def identity_updater_loop():
 async def stats_loop():
     while True:
         try:
+            if mongo_client.db is None:
+                await mongo_client.connect()
             db = mongo_client.db
             eventos_min = await db.events.count_documents({"timestamp": {"$gte": (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()}})
             activas = await db.identities.count_documents({"last_seen": {"$gte": (datetime.now(timezone.utc) - timedelta(hours=24))}})
@@ -151,11 +161,48 @@ async def stats_loop():
             pass
         await asyncio.sleep(30.0)
 
+
+async def health_broadcast_loop():
+    """Emite HealthReport completo cada 60s para la vista de salud del dashboard."""
+    while True:
+        try:
+            if mongo_client.db is None:
+                await mongo_client.connect()
+            if not redis_bus.client:
+                await redis_bus.connect()
+            checker = HealthChecker(redis_bus, mongo_client)
+            report = await checker.full_check()
+            await sio.emit("health_update", report.model_dump(mode="json"))
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.warning("[WS] health_broadcast_loop: %s", e)
+        await asyncio.sleep(60.0)
+
+
+async def health_throughput_loop():
+    """Serie de eventos por minuto (2h) cada 30s para gráfico Recharts."""
+    while True:
+        try:
+            if mongo_client.db is None:
+                await mongo_client.connect()
+            pts = await compute_events_per_minute_series(mongo_client, 120)
+            await sio.emit("health_throughput", {"points": pts})
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.warning("[WS] health_throughput_loop: %s", e)
+        await asyncio.sleep(30.0)
+
+
 async def redis_listener():
     """Puente unificado. Escucha pub/sub crudo de alert/ai, 
     y para eventos el canal dashboard:events (como requiere la arquitectura)."""
+    if not redis_bus.client:
+        await redis_bus.connect()
     r = redis_bus.client
-    if not r: return
+    if not r:
+        return
     
     pubsub = r.pubsub()
     channels = [
@@ -210,6 +257,8 @@ def start_background_tasks():
         active_tasks.append(asyncio.create_task(identity_updater_loop()))
         active_tasks.append(asyncio.create_task(stats_loop()))
         active_tasks.append(asyncio.create_task(redis_listener()))
+        active_tasks.append(asyncio.create_task(health_broadcast_loop()))
+        active_tasks.append(asyncio.create_task(health_throughput_loop()))
         logger.info("[WS] Tareas en background iniciadas.")
 
 # Wrapper para correr al iniciar FastAPI

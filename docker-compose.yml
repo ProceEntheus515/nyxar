@@ -101,7 +101,9 @@ services:
       - nyxar-net
 
   api:
-    build: ./api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
     restart: unless-stopped
     ports:
       - "8000:8000"

@@ -1,0 +1,10 @@
+.banner {
+  background: rgba(255, 71, 87, 0.12);
+  border-bottom: 1px solid var(--color-critical);
+  color: var(--color-critical);
+  padding: var(--space-3) var(--space-6);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  text-align: center;
+  flex-shrink: 0;
+}

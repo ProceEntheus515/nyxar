@@ -7,7 +7,8 @@ const SOCKET_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
 export function useWebSocket() {
   const { 
     addEvent, addEventBatch, addAlert, updateIdentity, 
-    addAiMemo, updateStats, setInitialState
+    addAiMemo, updateStats, setInitialState,
+    setHealthReport, setHealthThroughput,
   } = useStore();
 
   useEffect(() => {
@@ -53,6 +54,14 @@ export function useWebSocket() {
 
     socket.on('stats_update', (stats) => {
       updateStats(stats);
+    });
+
+    socket.on('health_update', (payload) => {
+      setHealthReport(payload);
+    });
+
+    socket.on('health_throughput', (payload) => {
+      setHealthThroughput(payload?.points);
     });
 
     socket.on('disconnect', () => {

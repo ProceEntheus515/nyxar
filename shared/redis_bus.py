@@ -105,6 +105,30 @@ class RedisBus:
             logger.warning("stream_length %s: %s", stream, e)
             return 0
 
+    async def stream_latest_payload(self, stream: str) -> Optional[dict]:
+        """Última entrada del stream (XREVRANGE count=1); payload JSON en campo data."""
+
+        async def op():
+            rows = await self.client.xrevrange(stream, "+", "-", count=1)
+            if not rows:
+                return None
+            _msg_id, fields = rows[0]
+            raw = fields.get("data")
+            if isinstance(raw, str):
+                try:
+                    return json.loads(raw)
+                except json.JSONDecodeError:
+                    return None
+            return None
+
+        if not self.client:
+            return None
+        try:
+            return await self._retry_operation(op)
+        except Exception as e:
+            logger.warning("stream_latest_payload %s: %s", stream, e)
+            return None
+
     # --- CACHÉ ---
 
     async def cache_get(self, key: str) -> Optional[dict]:

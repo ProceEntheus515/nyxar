@@ -31,3 +31,8 @@ faker
 
 # --- ad_connector ---
 ldap3
+
+# --- tests (dev) ---
+pytest
+pytest-asyncio
+fakeredis

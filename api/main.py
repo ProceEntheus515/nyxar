@@ -14,6 +14,7 @@ from shared.heartbeat import heartbeat_loop
 
 # Routers
 from api.routers import events, identities, incidents, alerts, simulator, ai, response, response_proposals, hunting, notifications
+from api.routers.health import router as health_router
 from api.routers.identity import router as identity_router, ensure_nyxar_start_time
 from api.routers.response import ensure_response_audit_indexes
 from api.routers.hunting import ensure_hunting_indexes
@@ -31,6 +32,8 @@ async def lifespan(app: FastAPI):
     
     await redis_bus.connect()
     await mongo_client.connect()
+    app.state.redis_bus = redis_bus
+    app.state.mongo_client = mongo_client
     await ensure_response_audit_indexes()
     await ensure_hunting_indexes()
     logger.info("Conexiones de API a Redis y MongoDB establecidas.")
@@ -114,6 +117,7 @@ app.include_router(response.router, prefix="/api/v1")
 app.include_router(response_proposals.router, prefix="/api/v1")
 app.include_router(hunting.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
+app.include_router(health_router)
 
 if os.getenv("LAB_MODE", "false").lower() == "true":
     app.include_router(simulator.router, prefix="/api/v1")
@@ -127,14 +131,6 @@ def success_response(data: Any, total: int = None) -> Dict[str, Any]:
     if total is not None:
         res["total"] = total
     return res
-
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "ok",
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
-
 
 @app.get("/")
 async def root():

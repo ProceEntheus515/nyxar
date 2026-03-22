@@ -7,6 +7,9 @@ export const useStore = create((set, get) => ({
   alerts: [],           // alertas recientes (fusionando incidentes y honeypots)
   aiMemos: [],          // memos de AI
   stats: {},            // estadísticas generales
+  healthReport: null,
+  healthThroughput: [],
+  healthGeneral: null,
   isLabMode: false,     // modo simulación
   /** Si se setea, Timeline intenta hacer scroll a ese evento y luego se limpia. */
   timelineFocusEventId: null,
@@ -43,6 +46,14 @@ export const useStore = create((set, get) => ({
   updateStats: (newStats) => set((state) => ({ 
     stats: { ...state.stats, ...newStats } 
   })),
+
+  setHealthReport: (report) =>
+    set({
+      healthReport: report,
+      healthGeneral: report?.estado_general ?? null,
+    }),
+
+  setHealthThroughput: (points) => set({ healthThroughput: Array.isArray(points) ? points : [] }),
   
   setLabMode: (mode) => set({ isLabMode: mode }),
   
