@@ -3,3 +3,4 @@ uvicorn
 motor
 redis
 python-socketio
+pydantic

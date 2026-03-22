@@ -270,7 +270,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 02 — DevOps Engineer
-**Rol:** 🐳 DevOps / Infrastructure Engineer  
+**Rol:** DevOps / Infrastructure Engineer  
 **Componente:** docker-compose.yml  
 **Entregable:** docker-compose.yml completamente funcional para el laboratorio
 
@@ -527,7 +527,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 04 — Backend Dev
-**Rol:** 🐍 Backend Developer  
+**Rol:** Backend Developer  
 **Componente:** Redis Bus — estructura de colas y helpers  
 **Entregable:** Un módulo compartido `shared/redis_bus.py`
 
@@ -659,7 +659,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 05 — Backend Dev
-**Rol:** 🐍 Backend Developer  
+**Rol:** Backend Developer  
 **Componente:** Collector — normalizer.py  
 **Entregable:** collector/normalizer.py funcional
 
@@ -782,7 +782,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 06 — Backend Dev
-**Rol:** 🐍 Backend Developer  
+**Rol:** Backend Developer  
 **Componente:** Collector — parser de DNS  
 **Entregable:** collector/parsers/dns_parser.py funcional
 
@@ -877,7 +877,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 07 — Backend Dev
-**Rol:** 🐍 Backend Developer  
+**Rol:** Backend Developer  
 **Componente:** Collector — parsers Proxy, Firewall y Wazuh  
 **Entregable:** Los tres archivos de parsers restantes
 
@@ -971,7 +971,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 08 — Simulator Dev
-**Rol:** 🤖 Simulation Engineer  
+**Rol:** Simulation Engineer  
 **Componente:** personas.json — identidades sintéticas  
 **Entregable:** simulator/personas.json con 25 usuarios sintéticos
 
@@ -1041,7 +1041,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 09 — Simulator Dev
-**Rol:** 🤖 Simulation Engineer  
+**Rol:** Simulation Engineer  
 **Componente:** generator.py — motor de tráfico sintético  
 **Entregable:** simulator/generator.py completamente funcional
 
@@ -1149,7 +1149,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 10 — Simulator Dev
-**Rol:** 🤖 Simulation Engineer  
+**Rol:** Simulation Engineer  
 **Componente:** attack_scenarios — todos los escenarios de ataque  
 **Entregable:** Los 5 archivos de escenarios de ataque
 
@@ -1402,7 +1402,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 12 — Security Dev
-**Rol:** 🔐 Security Engineer  
+**Rol:** Security Engineer  
 **Componente:** Enricher — main.py (motor de enriquecimiento)  
 **Entregable:** enricher/main.py — el loop de enriquecimiento completo
 

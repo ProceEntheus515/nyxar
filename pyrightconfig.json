@@ -1,0 +1,14 @@
+{
+    "venvPath": ".",
+    "venv": ".venv",
+    "pythonVersion": "3.11",
+    "pythonPlatform": "Windows",
+    "extraPaths": [
+        "./api",
+        "./correlator",
+        "./enricher",
+        "./collector",
+        "./ai_analyst",
+        "./simulator"
+    ]
+}

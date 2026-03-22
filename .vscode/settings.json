@@ -1,0 +1,11 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "python.analysis.extraPaths": [
+        "./api",
+        "./correlator",
+        "./enricher",
+        "./collector",
+        "./ai_analyst",
+        "./simulator"
+    ]
+}
