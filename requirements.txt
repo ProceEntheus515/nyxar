@@ -1,4 +1,4 @@
-# === CyberPulse - Dependencias Unificadas (Desarrollo Local) ===
+# === NYXAR - Dependencias unificadas (desarrollo local) ===
 # Este archivo combina TODOS los requirements de los microservicios
 # para que el IDE (Pylance) y el desarrollo local funcionen sin problemas.
 # En producción, cada servicio usa su propio requirements.txt via Docker.

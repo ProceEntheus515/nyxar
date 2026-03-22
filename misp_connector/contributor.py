@@ -98,7 +98,7 @@ def _map_externo_to_misp(externo_tipo: str, valor: str) -> Optional[str]:
 def _sanitize_comment(incident: dict) -> str:
     patron = str(incident.get("patron") or "Threat activity").strip()
     mitre = str(incident.get("mitre_technique") or "").strip()
-    base = f"Detectado por CyberPulse — {patron}"
+    base = f"Detectado por NYXAR — {patron}"
     if mitre:
         base += f" ({mitre})"
     base += ". IOC compartido con fines defensivos."
@@ -133,7 +133,7 @@ def _distribution_level() -> int:
 
 class MISPContributor:
     """
-    Publica IOCs nuevos y validados de CyberPulse a MISP (MISP_CONTRIBUTE=true).
+    Publica IOCs nuevos y validados de NYXAR a MISP (MISP_CONTRIBUTE=true).
     """
 
     def __init__(self) -> None:
@@ -230,7 +230,7 @@ class MISPContributor:
             ):
                 continue
 
-            tags = ["cyberpulse", "latam"]
+            tags = ["nyxar", "latam"]
             patron_slug = re.sub(
                 r"[^a-z0-9]+", "_", str(incident.get("patron", "")).lower()
             ).strip("_")
@@ -365,12 +365,12 @@ class MISPContributor:
             return None
 
         titulo = str(incident.get("patron") or incident.get("id") or "incident")
-        info = f"[CyberPulse LATAM] {titulo}"
+        info = f"[NYXAR] {titulo}"
         sev = self._map_severidad_to_threat_level(_norm_severidad(incident))
         dist = _distribution_level()
         tag_names = [
             _tlp_tag(),
-            "cyberpulse:latam",
+            "nyxar:latam",
             "sector:latam",
         ]
 

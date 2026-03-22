@@ -15,7 +15,7 @@ from collector.parsers.wazuh_parser import WazuhParser
 logger = get_logger("collector.main")
 
 async def main():
-    logger.info("Inicializando CyberPulse Collector...")
+    logger.info("Inicializando NYXAR Collector...")
     redis_bus = RedisBus()
     await redis_bus.connect()
     mongo_client = MongoClient()

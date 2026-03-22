@@ -46,7 +46,7 @@ export default function App() {
             CP
           </div>
           <div>
-            <h1 className="font-bold text-[15px] tracking-wide m-0 leading-tight">CyberPulse LATAM</h1>
+            <h1 className="font-bold text-[15px] tracking-wide m-0 leading-tight font-mono">NYXAR</h1>
             <p className="text-[10px] text-[var(--color-primary)] uppercase tracking-widest font-mono">SOC Central Dashboard</p>
           </div>
         </div>

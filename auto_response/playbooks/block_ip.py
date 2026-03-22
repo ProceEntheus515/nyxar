@@ -37,7 +37,7 @@ class BlockIPPlaybook(PlaybookBase):
         body = {
             "action": "block_ip",
             "ip": accion.objetivo,
-            "source": "cyberpulse_auto_response",
+            "source": "nyxar_auto_response",
         }
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:

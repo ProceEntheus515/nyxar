@@ -1,5 +1,6 @@
 {
-  "name": "cyberpulse-dashboard",
+  "name": "nyxar-dashboard",
+  "description": "Dashboard operativo para NYXAR",
   "version": "1.0.0",
   "type": "module",
   "scripts": {

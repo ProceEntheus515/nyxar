@@ -18,7 +18,7 @@ export function useWebSocket() {
     });
 
     socket.on('connect', () => {
-      console.log('Connected to CyberPulse WebSocket');
+      console.log('Connected to NYXAR WebSocket');
     });
 
     socket.on('initial_state', (payload) => {

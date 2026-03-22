@@ -65,7 +65,7 @@ async def get_incident(incident_id: str):
             hasta = (ts.timestamp() + 3600) # En una ventana de ±1h
             
             # Formatos de fecha compatibles con nuestro index
-            # En CyberPulse asumimos ISO str
+            # En NYXAR asumimos ISO str
             cursor = mongo_client.db.events.find({
                 "interno.ip": host
             }).sort("timestamp", -1).limit(20)

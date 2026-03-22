@@ -1,1 +1,1 @@
-# E2E test package for CyberPulse LATAM
+# E2E test package for NYXAR

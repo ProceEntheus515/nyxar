@@ -35,7 +35,7 @@ class MongoClient:
             cls._instance.mongo_url = (
                 os.getenv("MONGO_URL")
                 or os.getenv("MONGODB_URL")
-                or "mongodb://localhost:27017/cyberpulse"
+                or "mongodb://localhost:27017/nyxar"
             )
         return cls._instance
 
@@ -47,10 +47,10 @@ class MongoClient:
                 try:
                     self._client = AsyncIOMotorClient(self.mongo_url, maxPoolSize=20)
                     
-                    # Extraer base de datos de la URL, defecto a 'cyberpulse' si no se provee
+                    # Extraer base de datos de la URL, defecto a 'nyxar' si no se provee
                     db_name = self.mongo_url.split("/")[-1].split("?")[0]
                     if not db_name:
-                        db_name = "cyberpulse"
+                        db_name = "nyxar"
                         
                     self.db = self._client[db_name]
                     

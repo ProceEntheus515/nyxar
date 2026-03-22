@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
     logger.info("API apagada.")
 
 app = FastAPI(
-    title="CyberPulse LATAM API",
+    title="NYXAR API",
     version="1.0.0",
     lifespan=lifespan
 )

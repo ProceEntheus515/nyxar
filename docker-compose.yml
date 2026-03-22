@@ -1,7 +1,7 @@
 version: '3.8'
 
 networks:
-  cyberpulse-net:
+  nyxar-net:
     driver: bridge
 
 services:
@@ -20,7 +20,7 @@ services:
       retries: 5
     env_file: .env
     networks:
-      - cyberpulse-net
+      - nyxar-net
 
   mongodb:
     image: mongo:7.0
@@ -35,7 +35,7 @@ services:
       retries: 5
     env_file: .env
     networks:
-      - cyberpulse-net
+      - nyxar-net
 
   pihole:
     image: pihole/pihole:latest
@@ -48,7 +48,7 @@ services:
       - ./data/pihole/logs:/var/log/pihole
     env_file: .env
     networks:
-      - cyberpulse-net
+      - nyxar-net
 
   collector:
     build: ./collector
@@ -62,7 +62,7 @@ services:
       - ./data/pihole/logs:/logs/dns:ro
     env_file: .env
     networks:
-      - cyberpulse-net
+      - nyxar-net
 
   enricher:
     build: ./enricher
@@ -74,7 +74,7 @@ services:
         condition: service_healthy
     env_file: .env
     networks:
-      - cyberpulse-net
+      - nyxar-net
 
   correlator:
     build: ./correlator
@@ -86,7 +86,7 @@ services:
         condition: service_healthy
     env_file: .env
     networks:
-      - cyberpulse-net
+      - nyxar-net
 
   ai_analyst:
     build: ./ai_analyst
@@ -98,7 +98,7 @@ services:
         condition: service_healthy
     env_file: .env
     networks:
-      - cyberpulse-net
+      - nyxar-net
 
   api:
     build: ./api
@@ -112,7 +112,7 @@ services:
         condition: service_healthy
     env_file: .env
     networks:
-      - cyberpulse-net
+      - nyxar-net
 
   simulator:
     build: ./simulator
@@ -124,7 +124,7 @@ services:
       - redis
     env_file: .env
     networks:
-      - cyberpulse-net
+      - nyxar-net
 
   dashboard:
     build: ./dashboard
@@ -135,7 +135,7 @@ services:
       - api
     env_file: .env
     networks:
-      - cyberpulse-net
+      - nyxar-net
 
   # Opcional: motor SOAR (montar el repo y ejecutar el modulo; habilitar AUTO_RESPONSE_ENABLED en .env)
   # auto_response:
@@ -151,4 +151,4 @@ services:
   #       condition: service_healthy
   #   env_file: .env
   #   networks:
-  #     - cyberpulse-net
+  #     - nyxar-net

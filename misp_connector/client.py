@@ -196,7 +196,7 @@ class MISPClient:
         self.base_url = _normalize_base_url(raw_url) if raw_url else ""
         self.verify_ssl = _parse_bool(os.getenv("MISP_VERIFY_SSL"), True)
         self.contribute = _parse_bool(os.getenv("MISP_CONTRIBUTE"), False)
-        self.org_name = os.getenv("MISP_ORG_NAME", "CyberPulse-LATAM").strip()
+        self.org_name = os.getenv("MISP_ORG_NAME", "NYXAR").strip()
 
     def _configured(self) -> bool:
         return bool(self.base_url and self._api_key)
@@ -401,7 +401,7 @@ class MISPClient:
 
         payload = dict(event_data)
         if "info" not in payload and self.org_name:
-            payload["info"] = f"{self.org_name} — evento CyberPulse"
+            payload["info"] = f"{self.org_name} — evento NYXAR"
 
         status, data = await self._request("POST", "/events/add", json_body=payload)
         if status == 404:

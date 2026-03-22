@@ -1,5 +1,5 @@
 """
-Fixtures compartidas para tests End-to-End de CyberPulse LATAM.
+Fixtures compartidas para tests End-to-End de NYXAR.
 
 Estos tests requieren el stack completo corriendo (Redis + MongoDB + todos los servicios).
 Correr con:
@@ -23,7 +23,7 @@ logger = get_logger("tests.e2e")
 
 REDIS_URL = "redis://localhost:6379"
 MONGO_URL = "mongodb://localhost:27017"
-MONGO_DB   = "cyberpulse"
+MONGO_DB   = "nyxar"
 API_BASE   = "http://localhost:8000"
 
 # --- Constantes de timing e2e ---

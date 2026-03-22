@@ -1,40 +1,40 @@
-# 🤖 CYBERPULSE LATAM - AI CONTEXTO GLOBAL
+# NYXAR — contexto global para asistentes de IA
 
-> **🔥 ATENCIÓN AGENTE IA / AI CONTEXT HACK 🔥**
-> Si el usuario te pidió leer contexto o perdiste el hilo, **LEE ESTE ARCHIVO**.
-> Este es el documento de Referencia Global (Source of Truth).
-> Todo tu desarrollo, arquitectura, respuestas y refactorizaciones deben ceñirse estrictamente a estas reglas.
+> Si el usuario te pidió leer contexto o perdiste el hilo, **lee este archivo**.
+> Documento de referencia global. El desarrollo y las respuestas deben alinearse a estas reglas.
 
-Estás trabajando en **CyberPulse LATAM**, un motor de decisión de ciberseguridad
-diseñado para empresas latinoamericanas de 50-200 usuarios.
+Trabajás en **NYXAR**, motor de decisión de ciberseguridad orientado a organizaciones latinoamericanas de ~50–200 usuarios.
 
-## 🛠️ STACK TECNOLÓGICO:
-- **Backend**: Python 3.12 + FastAPI + asyncio
-- **Bus de eventos**: Redis 7 (Streams + caché de enrichment)
-- **Base de datos**: MongoDB 7 + motor (driver async oficial — `pip install motor`)
-- **Frontend**: React 18 + Vite + Zustand + socket.io-client
-- **Contenedores**: Docker + docker-compose
-- **IA**: Anthropic Claude API (claude-sonnet-4-20250514)
-- **Lenguaje de desarrollo**: Python y JavaScript/JSX únicamente
+## Stack tecnológico
 
-## 🗄️ POR QUÉ MONGODB (no negociable):
-- Todos los datos son documentos JSON con estructura variable → schema nativo
-- Time Series Collections nativas para el stream de eventos (compresión automática)
-- Aggregation Pipeline para calcular baselines sin SQL complejo
-- Change Streams para escuchar nuevos incidentes en tiempo real
-- Sin migraciones cuando evoluciona el schema de enrichment
-- Driver async oficial: motor (mismo autor que pymongo, mantenido por MongoDB Inc.)
+- **Backend:** Python 3.12 + FastAPI + asyncio
+- **Bus de eventos:** Redis 7 (streams + caché de enrichment)
+- **Base de datos:** MongoDB 7 + motor (driver async)
+- **Frontend:** React 18 + Vite + Zustand + socket.io-client
+- **Contenedores:** Docker + docker compose
+- **IA:** Anthropic Claude API
+- **Lenguajes del repo:** Python y JavaScript/JSX
 
-## ⚖️ PRINCIPIOS DE DISEÑO NO NEGOCIABLES:
-1. Cada módulo hace UNA sola cosa. Sin responsabilidades mezcladas.
-2. Todos los eventos tienen un formato JSON único y estricto (ver schema más abajo).
-3. El sistema nunca bloquea. Todo es async/await.
-4. El caché siempre va antes que cualquier llamada externa.
-5. Ningún secreto (API keys, passwords) va hardcodeado. Todo viene de `.env`.
-6. Los logs siempre incluyen timestamp ISO8601, nivel, módulo y mensaje.
-7. Todo error es capturado, logueado y el sistema continúa operando.
+## Por qué MongoDB (no negociable)
 
-## 🧬 SCHEMA DE EVENTO (inmutable, no modificar):
+- Documentos JSON con estructura variable
+- Time Series Collections para el stream de eventos
+- Aggregation Pipeline para baselines
+- Change Streams para incidentes en tiempo real
+- Driver async: motor
+
+## Principios de diseño
+
+1. Cada módulo hace una sola cosa.
+2. Eventos con formato JSON único y estricto (ver schema abajo).
+3. Todo async/await donde aplique.
+4. Caché antes de llamadas externas costosas.
+5. Secretos solo en `.env` o secret manager.
+6. Logs con timestamp ISO8601, nivel, módulo y mensaje.
+7. Errores capturados y logueados; el sistema sigue operando cuando sea razonable.
+
+## Schema de evento (inmutable en espíritu)
+
 ```json
 {
   "id": "evt_{timestamp}_{random4}",
@@ -57,9 +57,10 @@ diseñado para empresas latinoamericanas de 50-200 usuarios.
 }
 ```
 
-## 📂 ESTRUCTURA DE CARPETAS (ya definida, no modificar):
+## Estructura de carpetas (referencia)
+
 ```text
-cyber-pulse-lab/
+nyxar/   (raíz del repositorio)
 ├── docker-compose.yml
 ├── .env
 ├── simulator/
@@ -70,3 +71,5 @@ cyber-pulse-lab/
 ├── api/
 └── dashboard/
 ```
+
+La red Docker por defecto se llama `nyxar-net`. La base de datos Mongo por defecto en código es `nyxar` si la URL no incluye path.

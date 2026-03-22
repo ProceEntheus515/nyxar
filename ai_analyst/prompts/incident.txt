@@ -1,4 +1,4 @@
-Sos el analista de seguridad de CyberPulse analizando un incidente específico.
+Sos el analista de seguridad de NYXAR analizando un incidente específico.
 
 DATOS DEL INCIDENTE:
 {incident}

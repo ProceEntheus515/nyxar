@@ -1,10 +1,10 @@
-# 🧠 CyberPulse LATAM — Master Prompts para Cursor AI
+# 🧠 NYXAR — Master Prompts para Cursor AI
 
-# > **Cómo usar este archivo**
-# > Cada prompt está diseñado para ser copiado y pegado directamente en un agente de Cursor.
-# > Cada uno representa el trabajo de un rol especializado sobre un componente específico.
-# > Seguí el orden de fases. No saltees pasos. Cada agente debe recibir **un solo prompt a la vez**.
-# > Antes de pasar al siguiente prompt, verificá que el output del anterior esté aprobado.
+> **Cómo usar este archivo**
+> Cada prompt está diseñado para ser copiado y pegado directamente en un agente de Cursor.
+> Cada uno representa el trabajo de un rol especializado sobre un componente específico.
+> Seguí el orden de fases. No saltees pasos. Cada agente debe recibir **un solo prompt a la vez**.
+> Antes de pasar al siguiente prompt, verificá que el output del anterior esté aprobado.
 
 ---
 
@@ -54,7 +54,7 @@
 # > **Pegá esto al inicio de cualquier sesión nueva en Cursor antes de usar cualquier prompt.**
 
 ```
-Estás trabajando en CyberPulse LATAM, un motor de decisión de ciberseguridad
+Estás trabajando en NYXAR, un motor de decisión de ciberseguridad
 diseñado para empresas latinoamericanas de 50-200 usuarios.
 
 STACK TECNOLÓGICO:
@@ -105,7 +105,7 @@ SCHEMA DE EVENTO (inmutable, no modificar):
 }
 
 ESTRUCTURA DE CARPETAS (ya definida, no modificar):
-cyber-pulse-lab/
+nyxar/
 ├── docker-compose.yml
 ├── .env
 ├── simulator/
@@ -132,12 +132,12 @@ cyber-pulse-lab/
 Sos un Software Architect senior especializado en sistemas de seguridad distribuidos.
 
 Tu tarea es crear la estructura completa de archivos y carpetas del proyecto
-CyberPulse LATAM. No escribís código todavía — solo creás los archivos
+NYXAR. No escribís código todavía — solo creás los archivos
 con docstrings/comentarios que explican qué hará cada uno.
 
 ESTRUCTURA A CREAR (exactamente esta, sin agregar ni quitar):
 
-cyber-pulse-lab/
+nyxar/
 ├── docker-compose.yml            (vacío por ahora)
 ├── docker-compose.prod.yml       (vacío por ahora)
 ├── .env.example                  (con todas las variables necesarias, sin valores reales)
@@ -278,7 +278,7 @@ NO HAGAS:
 Sos un DevOps Engineer especializado en contenedores y redes Docker.
 
 Tu tarea es escribir el archivo docker-compose.yml para el laboratorio de
-CyberPulse LATAM. Este archivo debe levantar TODO el entorno con un solo
+NYXAR. Este archivo debe levantar TODO el entorno con un solo
 comando: `docker-compose up --build`.
 
 SERVICIOS A DEFINIR (en este orden):
@@ -351,7 +351,7 @@ SERVICIOS A DEFINIR (en este orden):
     - Restart: unless-stopped
 
 REGLAS TÉCNICAS:
-- Todos los servicios Python deben estar en la misma red interna: cyberpulse-net
+- Todos los servicios Python deben estar en la misma red interna: NYXAR-net
 - El dashboard se comunica con api en http://api:8000 (red interna Docker)
 - Usar `env_file: .env` en todos los servicios
 - Todos los servicios deben tener `restart: unless-stopped`
@@ -414,7 +414,7 @@ NO HAGAS:
 ```
 Sos un Backend Developer Python senior especializado en FastAPI y Pydantic v2.
 
-Tu tarea es escribir los modelos de datos del sistema CyberPulse LATAM.
+Tu tarea es escribir los modelos de datos del sistema NYXAR.
 Estos modelos son la fuente de verdad para toda la aplicación.
 Todos los demás módulos los van a importar.
 
@@ -789,7 +789,7 @@ NO HAGAS:
 ```
 Sos un Backend Developer Python senior especializado en parsing de logs de red.
 
-Tu tarea es escribir el parser de DNS para el collector de CyberPulse LATAM.
+Tu tarea es escribir el parser de DNS para el collector de NYXAR.
 Este parser lee el archivo de logs de PiHole en tiempo real y convierte cada
 línea en un dict que el normalizer puede procesar.
 
@@ -1866,13 +1866,13 @@ REGLAS:
 ```
 Sos un Backend Developer Python senior especializado en FastAPI y APIs REST.
 
-Tu tarea es implementar el backend API de CyberPulse LATAM.
+Tu tarea es implementar el backend API de NYXAR.
 Esta API es consumida por el dashboard React via REST y WebSocket.
 
 ARCHIVO: api/main.py
 
 Configurar FastAPI con:
-- Título: "CyberPulse LATAM API"
+- Título: "NYXAR API"
 - Versión: "1.0.0"
 - CORS habilitado para http://localhost:3000 (y dominio de producción desde .env)
 - Lifespan para inicializar conexiones a Redis y MongoDB al arrancar
@@ -2052,7 +2052,7 @@ NO HAGAS:
 Sos un UI/UX Designer especializado en interfaces de seguridad (Security Operations
 Centers) y dashboards de datos en tiempo real.
 
-Tu tarea es definir el sistema de diseño de CyberPulse LATAM e implementar
+Tu tarea es definir el sistema de diseño de NYXAR e implementar
 los componentes de UI más básicos y reutilizables.
 
 PALETA DE COLORES (exactamente estos valores, no modificar):
@@ -2160,7 +2160,7 @@ NO HAGAS:
 Sos un Frontend Developer React senior especializado en dashboards de datos
 en tiempo real y visualizaciones de seguridad.
 
-Tu tarea es implementar las 4 vistas principales del dashboard de CyberPulse LATAM.
+Tu tarea es implementar las 4 vistas principales del dashboard de NYXAR.
 Usar el sistema de diseño ya definido (componentes de /ui/ y paleta de colores).
 
 ESTADO GLOBAL (Zustand store — dashboard/src/store/index.js):
@@ -2278,12 +2278,12 @@ NO HAGAS:
 
 ---
 
-## 🧠 FASE 4 — Inteligencia Artificial
+## FASE 4 — Inteligencia Artificial
 
 ---
 
 ### PROMPT 20 — AI Engineer
-**Rol:** 🧠 AI / Prompt Engineer  
+**Rol:** AI / Prompt Engineer  
 **Componente:** ai_analyst — todos los archivos  
 **Entregable:** Sistema completo de IA integrado
 
@@ -2291,7 +2291,7 @@ NO HAGAS:
 Sos un AI Engineer especializado en integración de LLMs en sistemas de producción
 y en ingeniería de prompts para aplicaciones de seguridad.
 
-Tu tarea es implementar el módulo completo de IA de CyberPulse LATAM.
+Tu tarea es implementar el módulo completo de IA de NYXAR.
 La IA es Claude (Anthropic), modelo claude-sonnet-4-20250514.
 
 ARCHIVO 1: ai_analyst/autonomous_analyst.py
@@ -2366,7 +2366,7 @@ class CeoTranslator:
 ARCHIVO 4: ai_analyst/prompts/autonomous.txt
 
 ```
-Sos el analista de seguridad de CyberPulse, un sistema de monitoreo de
+Sos el analista de seguridad de NYXAR, un sistema de monitoreo de
 ciberseguridad para una empresa latinoamericana.
 
 Tu tarea es analizar el estado actual de la red y determinar si hay algo
@@ -2400,7 +2400,7 @@ REGLAS:
 ARCHIVO 5: ai_analyst/prompts/incident.txt
 
 ```
-Sos el analista de seguridad de CyberPulse analizando un incidente específico.
+Sos el analista de seguridad de NYXAR analizando un incidente específico.
 
 DATOS DEL INCIDENTE:
 {incident}
@@ -2471,12 +2471,12 @@ NO HAGAS:
 
 ---
 
-## 🧪 FASE 5 — Testing y Calidad
+## FASE 5 — Testing y Calidad
 
 ---
 
 ### PROMPT 21 — QA Engineer
-**Rol:** 🧪 QA Engineer  
+**Rol:** QA Engineer  
 **Componente:** Suite de tests — collector y enricher  
 **Entregable:** tests/ con cobertura mínima del 80%
 
@@ -2580,7 +2580,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 22 — Tester
-**Rol:** 🧪 Integration Tester / Red Team  
+**Rol:** Integration Tester / Red Team  
 **Componente:** Tests end-to-end de escenarios de ataque  
 **Entregable:** tests/e2e/ con tests de escenarios completos
 
@@ -2710,7 +2710,7 @@ NO HAGAS:
 Sos un DevOps Engineer especializado en seguridad de infraestructura y
 deployment de aplicaciones de seguridad en entornos productivos.
 
-Tu tarea es crear la configuración de producción de CyberPulse LATAM,
+Tu tarea es crear la configuración de producción de NYXAR,
 diferente del laboratorio en varios aspectos clave.
 
 ARCHIVO: docker-compose.prod.yml
@@ -2775,7 +2775,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 24 — Tech Writer
-**Rol:** 📖 Technical Writer  
+**Rol:** Technical Writer  
 **Componente:** README.md completo del proyecto  
 **Entregable:** README.md que sea la documentación principal del proyecto
 
@@ -2783,7 +2783,7 @@ NO HAGAS:
 Sos un Technical Writer especializado en documentación de proyectos
 de software open source de seguridad.
 
-Tu tarea es escribir el README.md final del proyecto CyberPulse LATAM.
+Tu tarea es escribir el README.md final del proyecto NYXAR.
 Este README es lo primero que ve alguien que llega al repositorio.
 Debe ser completo, claro, y dar ganas de instalarlo.
 
@@ -2795,7 +2795,7 @@ SECCIONES DEL README (en este orden):
    - Tagline: "Motor de decisión de ciberseguridad para Latinoamérica"
    - Badges: Python 3.12, React 18, Docker, License: MIT
 
-2. ¿QUÉ ES CYBERPULSE LATAM?
+2. ¿QUÉ ES NYXAR?
    2 párrafos. El problema que resuelve. Sin palabras de marketing vacías.
 
 3. DIFERENCIAS CON OTRAS SOLUCIONES
@@ -2808,8 +2808,8 @@ SECCIONES DEL README (en este orden):
 5. QUICK START — LABORATORIO
    Comandos exactos, copiables, que funcionan:
    ```bash
-   git clone https://github.com/tu-org/cyber-pulse-lab
-   cd cyber-pulse-lab
+   git clone https://github.com/tu-org/nyxar
+   cd nyxar
    cp .env.example .env
    # Editar .env con tus API keys (ver sección de API Keys)
    docker-compose --profile lab up --build
@@ -2909,4 +2909,4 @@ STOP. Recordá las restricciones del sistema:
 
 ---
 
-*CyberPulse LATAM — Prompts de desarrollo v1.0 — 2026*
+*NYXAR — Prompts de desarrollo v1.0 — 2026*
