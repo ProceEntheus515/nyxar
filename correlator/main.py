@@ -44,7 +44,7 @@ class CorrelatorEngine:
             # Registrar bloqueo de 30 mins
             await r.set(dkey, "1", ex=1800)
             
-            logger.critical(f"🚨 ALERTA GENERADA 🚨 Host: {inc.host_afectado} | Patron: {inc.patron} | Severidad: {inc.severidad} | Mitre: {inc.mitre_technique}")
+            logger.critical(f"ALERTA GENERADA - Host: {inc.host_afectado} | Patron: {inc.patron} | Severidad: {inc.severidad} | Mitre: {inc.mitre_technique}")
 
             # 2. Publicar al bus Redis events:alerts
             await self.redis_bus.publish_alert(inc.model_dump(mode="json")) # Envio para Sockets y Webs

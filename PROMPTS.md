@@ -1859,7 +1859,7 @@ REGLAS:
 ---
 
 ### PROMPT 16 — Backend Dev
-**Rol:** ⚡ Backend Developer  
+**Rol:** Backend Developer  
 **Componente:** FastAPI — main.py y todos los routers  
 **Entregable:** Backend API completamente funcional
 
@@ -1965,7 +1965,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 17 — Backend Dev
-**Rol:** ⚡ Backend Developer  
+**Rol:** Backend Developer  
 **Componente:** WebSocket — tiempo real al dashboard  
 **Entregable:** api/websocket.py con push de eventos en tiempo real
 
@@ -2044,7 +2044,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 18 — UI/UX Designer
-**Rol:** 🎨 UI/UX Designer  
+**Rol:** UI/UX Designer  
 **Componente:** Sistema de diseño y componentes base  
 **Entregable:** Sistema de diseño documentado + componentes base de React
 
@@ -2152,7 +2152,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 19 — Frontend Dev
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Componente:** Dashboard — las 4 vistas principales  
 **Entregable:** NetworkMap.jsx, Timeline.jsx, Identities.jsx, AttackInjector.jsx
 
@@ -2211,7 +2211,7 @@ Feed vertical de eventos en tiempo real.
 
 Cada IncidentCard muestra:
 - Timestamp (con TimeAgo)
-- Ícono según source (DNS: 🌐, Proxy: 🔗, Firewall: 🔥, Wazuh: 🛡️, Endpoint: 💻)
+- Usa SVGs acordes según source (DNS:, Proxy:, Firewall: , Wazuh:, Endpoint:)
 - Identidad involucrada (con AreaBadge)
 - Descripción del evento en una línea
 - RiskBadge si tiene risk_score > 40
@@ -2246,7 +2246,7 @@ VISTA 4: AttackInjector.jsx (solo visible si isLabMode === true)
 Panel flotante en la esquina inferior derecha.
 
 Contenido:
-- Botón principal: "⚡ Inyectar Ataque"
+- Botón principal: "Inyectar Ataque"
 - Al hacer click: modal con:
   * Dropdown de escenario: phishing | ransomware | dns_tunneling | lateral_movement | exfiltration
   * Dropdown de target: lista de identidades disponibles
@@ -2273,6 +2273,7 @@ NO HAGAS:
   Actualizar solo los nodos afectados con D3 transitions.
 - No uses setTimeout en los componentes. Todo timing es manejado por WebSocket.
 - No muestres IPs internas en la vista CEO (ofuscar como "Dispositivo #N").
+- No uses iconos de emojis ni nada que refiera a hecho por IA, usa SVGs acordes según source (DNS:, Proxy:, Firewall: , Wazuh:, Endpoint:)
 ```
 
 ---

@@ -82,7 +82,7 @@ class HoneypotManager:
             indicador = config["indicador"]
             
             if self._find_indicator(evento, indicador):
-                logger.critical(f"🚨 TRAMPA HONEYPOT ACTIVADA 🚨 [{nombre_hp}] tocado por {evento.interno.ip}")
+                logger.critical(f"TRAMPA HONEYPOT ACTIVADA - [{nombre_hp}] tocado por {evento.interno.ip}")
                 
                 hit = HoneypotHit(
                     id=f"HP-{uuid.uuid4().hex[:8]}",
