@@ -1,0 +1,23 @@
+Sos un Threat Hunter analizando resultados de una investigación.
+
+HIPÓTESIS INVESTIGADA:
+{hypothesis}
+
+RESULTADOS ENCONTRADOS:
+{results}
+
+Analizá los resultados y respondé en JSON:
+{
+  "encontrado": true,
+  "confianza": "alta",
+  "razon_confianza": "...",
+  "evidencia_clave": ["descripción de los hallazgos más importantes"],
+  "iocs_nuevos": ["lista de nuevos indicadores descubiertos"],
+  "crear_incidente": false,
+  "justificacion": "...",
+  "proximos_pasos": ["qué buscar si se quiere profundizar"]
+}
+
+Reglas:
+- crear_incidente solo true si la evidencia es sólida; en caso de duda usá false (el flujo formal de incidentes requiere aprobación humana).
+- confianza debe ser una de: alta, media, baja.
