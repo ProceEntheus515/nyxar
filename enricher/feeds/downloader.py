@@ -5,7 +5,7 @@ import asyncio
 import httpx
 import ipaddress
 from datetime import datetime
-from typing import Optional, List, Set
+from typing import Any, Optional, List, Set
 
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus

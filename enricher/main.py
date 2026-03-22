@@ -62,16 +62,16 @@ class EnrichmentEngine:
         try:
             valor, tipo = self._extraer_target(evento)
             if not valor or not tipo:
-                # Eventos locales o erráticos (Ej procesar archivos locales)
                 return evento
                 
             # PASO 2: Verificar Caché
             cached = await self.cache.get_enrichment(valor)
             if cached:
                 await self.cache.record_hit()
-                evento.enrichment = cached
-                evento.risk_score = self._calcular_risk_score(cached.reputacion)
-                return evento
+                return evento.model_copy(update={
+                    "enrichment": cached,
+                    "risk_score": self._calcular_risk_score(cached.reputacion)
+                })
                 
             await self.cache.record_miss()
 
@@ -81,41 +81,45 @@ class EnrichmentEngine:
             if tipo == "ip":
                 match_local = await self.feeds.check_ip(valor)
                 if match_local:
-                    enrich_obj = Enrichment(reputacion="malicioso", fuente=f"Local Blocklist ({match_local})", detalles={}) # type: ignore
+                    enrich_obj = Enrichment(reputacion="malicioso", fuente=f"Local Blocklist ({match_local})", tags=[match_local])
             elif tipo == "dominio":
                 match_local = await self.feeds.check_domain(valor)
                 if match_local:
-                    enrich_obj = Enrichment(reputacion="malicioso", fuente=f"Local Blocklist ({match_local})", detalles={}) # type: ignore
+                    enrich_obj = Enrichment(reputacion="malicioso", fuente=f"Local Blocklist ({match_local})", tags=[match_local])
 
-            # PASO 4: Consultar APIs secuenciales ante falta de inteligencia local
+            # PASO 4: Consultar APIs
             if not enrich_obj:
                 if tipo == "ip":
-                    enrich_obj = await self.abuse_ipdb.check_ip(valor)
+                    try:
+                        enrich_obj = await self.abuse_ipdb.check_ip(valor)
+                    except Exception as e:
+                        logger.warning(f"AbuseIPDB falló para {valor}: {e}")
                     
                 if not enrich_obj and (tipo == "ip" or tipo == "dominio"):
-                    enrich_obj = await self.otx.check_indicator(valor, tipo)
+                    try:
+                        enrich_obj = await self.otx.check_indicator(valor, tipo)
+                    except Exception as e:
+                        logger.warning(f"OTX falló para {valor}: {e}")
                     
-                if tipo == "hash" or (not enrich_obj and tipo == "hash"):
-                    # Solo VT (simulado/skipped por el prompt)
-                    enrich_obj = Enrichment(reputacion="desconocido", fuente="VirusTotal (Skipped)", detalles={}) # type: ignore
+                if tipo == "hash":
+                    enrich_obj = Enrichment(reputacion="desconocido", fuente="VirusTotal (Skipped)", tags=[])
 
-            # Fallback final timeout
+            # Fallback final
             if not enrich_obj:
-                enrich_obj = Enrichment(reputacion="desconocido", fuente="timeout", detalles={}) # type: ignore
+                enrich_obj = Enrichment(reputacion="desconocido", fuente="timeout", tags=[])
 
-            # PASO 5: Asignar score y empaquetar
-            evento.enrichment = enrich_obj
-            evento.risk_score = self._calcular_risk_score(enrich_obj.reputacion)
-            
-            # PASO 6: Guardar en caché
+            # PASO 5: Guardar en caché y retornar copia inmutable correcta
             await self.cache.set_enrichment(valor, enrich_obj)
             
-            # PASO 7: Retornar mutado
-            return evento
+            return evento.model_copy(update={
+                "enrichment": enrich_obj,
+                "risk_score": self._calcular_risk_score(enrich_obj.reputacion)
+            })
             
         except Exception as e:
             logger.error(f"Falla crítica enriqueciendo evento ID={evento.id}: {e}")
             return evento
+
 
     async def _procesar_evento(self, evt_id: bytes, raw_dict: dict) -> bytes:
         """Helper para try-catch por el gather en la pipeline map-reduce"""
