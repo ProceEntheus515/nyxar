@@ -1,6 +1,16 @@
 import { create } from 'zustand';
 
-export const useStore = create((set, get) => ({
+const LS_SIDEBAR = 'nyxar-sidebar-collapsed'
+
+function readSidebarCollapsed() {
+  try {
+    return localStorage.getItem(LS_SIDEBAR) === '1'
+  } catch {
+    return false
+  }
+}
+
+export const useStore = create((set) => ({
   events: [],           // últimos 500 eventos
   identities: {},       // mapa id → Identidad
   incidents: [],        // incidentes abiertos
@@ -11,10 +21,41 @@ export const useStore = create((set, get) => ({
   healthThroughput: [],
   healthGeneral: null,
   isLabMode: false,     // modo simulación
+  wsConnected: false,
+  /** Tras el primer connect real, sirve para distinguir "conectando" vs "reconectando". */
+  wsEverConnected: false,
+  /** Panel de detalle: persiste al cambiar de vista hasta cerrar. */
+  detailPanel: { type: null, id: null, isOpen: false },
   /** Si se setea, Timeline intenta hacer scroll a ese evento y luego se limpia. */
   timelineFocusEventId: null,
+  sidebarCollapsed: readSidebarCollapsed(),
 
   setTimelineFocusEventId: (id) => set({ timelineFocusEventId: id || null }),
+
+  setWsConnected: (connected) =>
+    set((state) => ({
+      wsConnected: Boolean(connected),
+      wsEverConnected: state.wsEverConnected || Boolean(connected),
+    })),
+
+  openDetailPanel: (type, id) =>
+    set({
+      detailPanel: { type: type || null, id: id ?? null, isOpen: true },
+    }),
+
+  closeDetailPanel: () =>
+    set((state) => ({
+      detailPanel: { ...state.detailPanel, isOpen: false },
+    })),
+
+  setSidebarCollapsed: (collapsed) => {
+    try {
+      localStorage.setItem(LS_SIDEBAR, collapsed ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+    set({ sidebarCollapsed: Boolean(collapsed) })
+  },
 
   addEvent: (event) => set((state) => ({ 
     events: [event, ...state.events].slice(0, 500) 

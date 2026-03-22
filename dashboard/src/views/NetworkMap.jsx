@@ -9,9 +9,10 @@ import MonoText from '../components/ui/MonoText';
 
 export default function NetworkMap() {
   const svgRef = useRef(null);
-  const containerRef = useRef(null);
+  const measureRef = useRef(null);
   const { identities, events, alerts } = useStore();
   const [selectedNode, setSelectedNode] = useState(null);
+  const [chartSize, setChartSize] = useState({ width: 0, height: 0 });
 
   // Computar Grafo Unificado (Identidades Locales + Nube/Destinos Activos últimos 5m)
   const graphData = useMemo(() => {
@@ -86,10 +87,27 @@ export default function NetworkMap() {
   }, [identities, events, alerts]);
 
   useEffect(() => {
-    if (!svgRef.current || !containerRef.current) return;
-    
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
+    const el = measureRef.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      setChartSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
+    };
+    measure();
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(measure);
+      ro.observe(el);
+      return () => ro.disconnect();
+    }
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
+  useEffect(() => {
+    const width = chartSize.width;
+    const height = chartSize.height;
+    if (!svgRef.current || width < 48 || height < 48) return;
 
     const svg = d3.select(svgRef.current)
       .attr('width', width)
@@ -100,21 +118,35 @@ export default function NetworkMap() {
 
     const g = svg.append('g');
 
-    // Pan & Zoom
     svg.call(d3.zoom().on('zoom', (event) => {
       g.attr('transform', event.transform);
     }));
 
-    // Datos copiados para simulación porque D3 muta los objetos
     const nodes = graphData.nodes.map(d => ({ ...d }));
     const links = graphData.links.map(d => ({ ...d }));
     const strokeColor = graphData.nodeStroke || readCssVar('--base-deep');
 
+    const cx = width / 2;
+    const cy = height / 2;
+    const n = nodes.length;
+    nodes.forEach((d, i) => {
+      const angle = (i / Math.max(n, 1)) * Math.PI * 2;
+      const spread = Math.min(width, height) * 0.12;
+      d.x = cx + Math.cos(angle) * spread;
+      d.y = cy + Math.sin(angle) * spread;
+    });
+
+    const linkCount = Math.max(links.length, 1);
+    const chargeMag = n <= 10 ? Math.min(160, 60 + n * 12) : Math.min(320, 100 + n * 18);
+    const linkDist = Math.max(48, Math.min(100, (width + height) / (4 + linkCount * 0.15)));
+
     const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).id(d => d.id).distance(100))
-      .force('charge', d3.forceManyBody().strength(-300))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collide', d3.forceCollide().radius(d => d.radius + 5));
+      .force('link', d3.forceLink(links).id(d => d.id).distance(linkDist).strength(0.7))
+      .force('charge', d3.forceManyBody().strength(-chargeMag))
+      .force('center', d3.forceCenter(cx, cy))
+      .force('collide', d3.forceCollide().radius(d => d.radius + 6).strength(0.9))
+      .force('x', d3.forceX(cx).strength(n <= 12 ? 0.06 : 0.02))
+      .force('y', d3.forceY(cy).strength(n <= 12 ? 0.06 : 0.02));
 
     // Glow filter
     const defs = svg.append("defs");
@@ -176,7 +208,14 @@ export default function NetworkMap() {
       .style('font-family', 'var(--font-ui, sans-serif)')
       .style('pointer-events', 'none');
 
+    const pad = 12;
     simulation.on('tick', () => {
+      nodes.forEach((d) => {
+        const r = (d.radius || 8) + pad;
+        d.x = Math.max(r, Math.min(width - r, d.x));
+        d.y = Math.max(r, Math.min(height - r, d.y));
+      });
+
       link
         .attr('x1', d => d.source.x)
         .attr('y1', d => d.source.y)
@@ -187,7 +226,7 @@ export default function NetworkMap() {
     });
 
     return () => simulation.stop();
-  }, [graphData]);
+  }, [graphData, chartSize.width, chartSize.height]);
 
   // Encontrar eventos locales al panel
   const nodeEvents = useMemo(() => {
@@ -198,12 +237,17 @@ export default function NetworkMap() {
   }, [events, selectedNode]);
 
   return (
-    <div className="relative w-full h-[calc(100vh-80px)]" ref={containerRef}>
-      <h2 className="absolute top-4 left-4 text-xl font-semibold text-white z-10 pointer-events-none">
+    <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col">
+      <h2 className="mb-3 shrink-0 text-xl font-semibold text-[var(--base-bright)]">
         Internal Topology & Connections
       </h2>
-      
-      <svg ref={svgRef} className="w-full h-full bg-[var(--base-deep)] rounded-lg border border-[var(--border-default)]" />
+
+      <div
+        ref={measureRef}
+        className="relative min-h-[min(60vh,520px)] w-full flex-1 overflow-hidden rounded-lg border border-[var(--border-default)] bg-[var(--base-deep)]"
+      >
+        <svg ref={svgRef} className="absolute inset-0 block h-full w-full" />
+      </div>
 
       {selectedNode && (
         <Card className="absolute top-4 right-4 w-[360px] p-0 z-20 flex flex-col shadow-2xl animate-slide-in-right bg-[var(--base-surface)]/95 backdrop-blur">
@@ -252,3 +296,4 @@ export default function NetworkMap() {
     </div>
   );
 }
+

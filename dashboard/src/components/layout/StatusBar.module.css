@@ -1,0 +1,87 @@
+/* Misma familia cromática que la sidebar (--base-surface), no --base-void (demasiado negro y “capa aparte”). */
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  height: var(--status-bar-height);
+  min-height: var(--status-bar-height);
+  padding: 0 var(--space-5);
+  background: var(--base-surface);
+  border-bottom: 1px solid var(--base-border);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--base-subtle);
+  box-sizing: border-box;
+}
+
+.liveBlock {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.liveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--cyan-base);
+  flex-shrink: 0;
+}
+
+.liveDotMuted {
+  background: var(--base-muted);
+  animation: none;
+}
+
+.liveLabel {
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wider);
+  color: var(--cyan-bright);
+}
+
+.reconnectLabel {
+  color: var(--base-muted);
+  letter-spacing: var(--tracking-wider);
+}
+
+.metrics {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.metricLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--base-muted);
+}
+
+.metricValue {
+  font-family: var(--font-data);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--base-bright);
+}
+
+.clock {
+  font-family: var(--font-data);
+  font-size: var(--text-xs);
+  color: var(--base-soft);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-left: var(--space-4);
+  margin-left: var(--space-2);
+  border-left: 1px solid var(--base-border);
+}

@@ -1,16 +1,17 @@
 .sidebar {
   display: flex;
   flex-direction: column;
-  width: 260px;
-  min-width: 260px;
+  width: var(--nav-width);
+  min-width: var(--nav-width);
+  height: 100%;
   background: var(--bg-card);
   border-right: 1px solid var(--base-border);
   flex-shrink: 0;
 }
 
 .sidebarCollapsed {
-  width: 72px;
-  min-width: 72px;
+  width: var(--nav-width-collapsed);
+  min-width: var(--nav-width-collapsed);
 }
 
 .logoButton {
@@ -36,6 +37,7 @@
 }
 
 .navButton {
+  display: block;
   margin: 0 var(--space-3);
   padding: var(--space-3) var(--space-4);
   background: transparent;
@@ -45,6 +47,7 @@
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition:
     background var(--duration-fast),
@@ -103,13 +106,13 @@
 
 @media (max-width: 767px) {
   .sidebar {
-    width: 72px;
-    min-width: 72px;
+    width: var(--nav-width-collapsed);
+    min-width: var(--nav-width-collapsed);
   }
 
   .sidebarCollapsed {
-    width: 72px;
-    min-width: 72px;
+    width: var(--nav-width-collapsed);
+    min-width: var(--nav-width-collapsed);
   }
 
   .collapseToggle {

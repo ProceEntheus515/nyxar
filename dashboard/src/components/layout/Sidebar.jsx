@@ -1,32 +1,30 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { NavLink } from 'react-router-dom'
+import { useStore } from '../../store'
 import { NyxarLogo } from './NyxarLogo'
 import { AboutNyxar } from './AboutNyxar'
 import styles from './Sidebar.module.css'
 
 const NAV = [
-  { id: 'map', label: 'Network Graph', short: 'N' },
-  { id: 'timeline', label: 'Live Events Timeline', short: 'T' },
-  { id: 'identities', label: 'Risk Identities', short: 'I' },
-  { id: 'hunting', label: 'Threat Hunting', short: 'H' },
-  { id: 'health', label: 'Salud del sistema', short: 'S' },
+  { id: 'map', path: '/map', label: 'Network Graph', short: 'N' },
+  { id: 'timeline', path: '/timeline', label: 'Live Events Timeline', short: 'T' },
+  { id: 'identities', path: '/identities', label: 'Risk Identities', short: 'I' },
+  { id: 'hunting', path: '/hunting', label: 'Threat Hunting', short: 'H' },
+  { id: 'health', path: '/health', label: 'Salud del sistema', short: 'S' },
 ]
 
-export function Sidebar({ activeTab, onTabChange, healthCritical }) {
+export function Sidebar({ healthCritical, isNarrowViewport }) {
   const [showAbout, setShowAbout] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
+  const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
+  const setSidebarCollapsed = useStore((s) => s.setSidebarCollapsed)
 
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)')
-    const apply = () => setCollapsed(mq.matches)
-    apply()
-    mq.addEventListener('change', apply)
-    return () => mq.removeEventListener('change', apply)
-  }, [])
+  const effectiveCollapsed = Boolean(isNarrowViewport || sidebarCollapsed)
+  const showCollapseToggle = !isNarrowViewport
 
   return (
     <>
       <aside
-        className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ''}`}
+        className={`${styles.sidebar} ${effectiveCollapsed ? styles.sidebarCollapsed : ''}`}
         aria-label="Navegación principal"
       >
         <button
@@ -36,36 +34,38 @@ export function Sidebar({ activeTab, onTabChange, healthCritical }) {
           title="¿Qué es NYXAR?"
           aria-label="Ver identidad del sistema"
         >
-          <NyxarLogo collapsed={collapsed} />
+          <NyxarLogo collapsed={effectiveCollapsed} />
         </button>
 
         <nav className={styles.nav}>
           {NAV.map((item) => (
-            <button
+            <NavLink
               key={item.id}
-              type="button"
-              className={`${styles.navButton} ${activeTab === item.id ? styles.navButtonActive : ''} ${
-                item.id === 'health' && healthCritical ? styles.navButtonCriticalPulse : ''
-              }`}
-              onClick={() => onTabChange(item.id)}
+              to={item.path}
+              className={({ isActive }) =>
+                `${styles.navButton} ${isActive ? styles.navButtonActive : ''} ${
+                  item.id === 'health' && healthCritical ? styles.navButtonCriticalPulse : ''
+                }`
+              }
               title={item.label}
-              aria-current={activeTab === item.id ? 'page' : undefined}
             >
-              {collapsed ? item.short : item.label}
-            </button>
+              {effectiveCollapsed ? item.short : item.label}
+            </NavLink>
           ))}
         </nav>
 
-        <div className={styles.collapseToggle}>
-          <button
-            type="button"
-            className={styles.collapseBtn}
-            onClick={() => setCollapsed((c) => !c)}
-            aria-expanded={!collapsed}
-          >
-            {collapsed ? '»' : '«'}
-          </button>
-        </div>
+        {showCollapseToggle ? (
+          <div className={styles.collapseToggle}>
+            <button
+              type="button"
+              className={styles.collapseBtn}
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              aria-expanded={!sidebarCollapsed}
+            >
+              {sidebarCollapsed ? '»' : '«'}
+            </button>
+          </div>
+        ) : null}
       </aside>
 
       <AboutNyxar isOpen={showAbout} onClose={() => setShowAbout(false)} />

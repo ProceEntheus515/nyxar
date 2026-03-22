@@ -8,10 +8,14 @@ export const NYXAR_LOGO_FULL_SVG = '/branding/nyxar-logo-full.svg'
 export const NYXAR_LOGO_PNG = '/branding/nyxar-logo.png'
 
 export function NyxarLogo({ collapsed }) {
-  const [src, setSrc] = useState(NYXAR_LOGO_SVG)
+  const [src, setSrc] = useState(collapsed ? NYXAR_LOGO_SVG : NYXAR_LOGO_FULL_SVG)
   const [useGlyph, setUseGlyph] = useState(false)
 
   const handleImgError = useCallback(() => {
+    if (src === NYXAR_LOGO_FULL_SVG) {
+      setSrc(NYXAR_LOGO_SVG)
+      return
+    }
     if (src === NYXAR_LOGO_SVG) {
       setSrc(NYXAR_LOGO_PNG)
       return
@@ -29,12 +33,11 @@ export function NyxarLogo({ collapsed }) {
         <img
           src={src}
           alt="NYXAR"
-          className={styles.logoImage}
+          className={collapsed ? styles.logoImageCollapsed : styles.logoImage}
           onError={handleImgError}
           decoding="async"
         />
       )}
-      {!collapsed && <span className={styles.logoName}>NYXAR</span>}
     </div>
   )
 }

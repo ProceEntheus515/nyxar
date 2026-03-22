@@ -1,0 +1,96 @@
+.column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: var(--panel-width);
+  max-width: var(--panel-width);
+  background: var(--base-surface);
+  border-left: 1px solid var(--base-border);
+  box-shadow: var(--shadow-sm);
+  animation: slideInRight var(--duration-normal) var(--ease-out) both;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--base-border);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--base-bright);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.close {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px solid var(--base-border);
+  border-radius: var(--radius-sm);
+  color: var(--base-subtle);
+  font-family: var(--font-data);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast),
+    border-color var(--duration-fast);
+}
+
+.close:hover {
+  color: var(--base-bright);
+  border-color: var(--base-border-strong);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--base-text);
+}
+
+.placeholder {
+  font-family: var(--font-data);
+  font-size: var(--text-xs);
+  color: var(--base-subtle);
+  line-height: var(--leading-normal);
+}
+
+.backdrop {
+  display: none;
+}
+
+@media (max-width: 1279px) {
+  .column {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    z-index: var(--z-overlay);
+    border-left: none;
+    animation: slideInRight var(--duration-normal) var(--ease-out) both;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-overlay) - 1);
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: color-mix(in srgb, var(--base-void) 75%, transparent);
+    cursor: pointer;
+  }
+}

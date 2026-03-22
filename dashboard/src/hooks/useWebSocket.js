@@ -9,6 +9,7 @@ export function useWebSocket() {
     addEvent, addEventBatch, addAlert, updateIdentity, 
     addAiMemo, updateStats, setInitialState,
     setHealthReport, setHealthThroughput,
+    setWsConnected,
   } = useStore();
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export function useWebSocket() {
     });
 
     socket.on('connect', () => {
-      console.log('Connected to NYXAR WebSocket');
+      setWsConnected(true);
     });
 
     socket.on('initial_state', (payload) => {
@@ -65,7 +66,7 @@ export function useWebSocket() {
     });
 
     socket.on('disconnect', () => {
-      console.log('Disconnected from server');
+      setWsConnected(false);
     });
 
     return () => {

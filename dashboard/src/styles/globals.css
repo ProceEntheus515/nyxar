@@ -26,19 +26,36 @@
   --z-modal: 5000;
 }
 
+/* Mismo matiz que el shell; 100dvh evita rendijas con barras del SO / navegador. */
 html {
-  background-color: var(--base-void);
+  background-color: var(--base-deep);
+  color-scheme: dark;
+  height: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  overflow: hidden;
 }
 
 body {
+  height: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   background-color: var(--base-deep);
   color: var(--base-text);
   font-family: var(--font-ui);
   font-size: var(--text-base);
-  margin: 0;
-  padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  background-color: var(--base-deep);
 }
 
 @keyframes hunt-spin {
