@@ -6,5 +6,6 @@ dist/
 
 # Entorno virtual y secretos
 .env
+.nyxar_state
 venv/
 env/

@@ -5,6 +5,7 @@ from . import alerts
 from . import simulator
 from . import ai
 from . import response_proposals
+from . import identity
 
 __all__ = [
     "events",
@@ -14,4 +15,5 @@ __all__ = [
     "simulator",
     "ai",
     "response_proposals",
+    "identity",
 ]

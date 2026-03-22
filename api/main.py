@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from typing import Dict, Any
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 
@@ -12,11 +12,13 @@ from shared.redis_bus import RedisBus
 
 # Routers
 from api.routers import events, identities, incidents, alerts, simulator, ai, response_proposals
+from api.routers.identity import router as identity_router, ensure_nyxar_start_time
 
 logger = get_logger("api.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ensure_nyxar_start_time()
     # Inicializar conexiones
     redis_bus = RedisBus()
     mongo_client = MongoClient()
@@ -69,6 +71,7 @@ async def custom_exception_handler(request: Request, exc: Exception):
 from api.websocket import socket_app
 
 app.include_router(events.router, prefix="/api/v1")
+app.include_router(identity_router, prefix="/api/v1")
 app.include_router(identities.router, prefix="/api/v1")
 app.include_router(incidents.router, prefix="/api/v1")
 app.include_router(alerts.router, prefix="/api/v1")
@@ -94,6 +97,12 @@ async def health_check():
         "status": "ok",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
+
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/api/v1/identity", status_code=302)
+
 
 # Mount final del ASGI de SocketIO envolviendo si es necesario o en ruta
 app.mount("/", socket_app)

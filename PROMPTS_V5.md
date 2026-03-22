@@ -184,7 +184,7 @@ En oraciones: "NYXAR detectó...", "NYXAR opera...", "según NYXAR..."
 ## N02 — Identity API
 
 ### PROMPT N02 — Identity API Engineer
-**Rol:** ⚡ Backend Developer  
+**Rol:** Backend Developer  
 **Entregable:** `api/routers/identity.py` — el endpoint que explica el origen de NYXAR
 
 ```
@@ -472,7 +472,7 @@ NO HAGAS:
 ## N03 — Frontend Identity
 
 ### PROMPT N03 — Frontend Identity Integration
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Entregable:** Integración de la identidad NYXAR en el dashboard
 
 ```
