@@ -2,7 +2,7 @@ import os
 import uuid
 import asyncio
 import random
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Literal, cast
 from urllib.parse import urlparse
 
 from shared.logger import get_logger
@@ -58,6 +58,32 @@ class EnrichmentEngine:
             
         return 15 # "desconocido" o "timeout"
 
+    async def _enrichment_from_misp(
+        self,
+        meta_valor: str,
+    ) -> Enrichment:
+        ctx = await self.redis_bus.cache_get(f"misp:meta:{meta_valor}")
+        rep: str = "malicioso"
+        if ctx and isinstance(ctx.get("reputacion"), str):
+            rep = ctx["reputacion"]
+        if rep not in ("limpio", "sospechoso", "malicioso", "desconocido"):
+            rep = "malicioso"
+        rep_lit = cast(Literal["limpio", "sospechoso", "malicioso", "desconocido"], rep)
+        tags: List[str] = []
+        categoria = "MISP IOC"
+        if ctx:
+            raw_tags = ctx.get("tags")
+            if isinstance(raw_tags, list):
+                tags = [str(t) for t in raw_tags]
+            categoria = str(ctx.get("event_name") or categoria)
+        await self.redis_bus.misp_hit_record()
+        return Enrichment(
+            reputacion=rep_lit,
+            fuente="misp",
+            categoria=categoria,
+            tags=tags,
+        )
+
     async def enrich_event(self, evento: Evento) -> Evento:
         try:
             valor, tipo = self._extraer_target(evento)
@@ -77,15 +103,36 @@ class EnrichmentEngine:
 
             # PASO 3: Blocklists Locales Ultrarrápidas
             enrich_obj = None
-            
+            match_local: Optional[str] = None
+
             if tipo == "ip":
                 match_local = await self.feeds.check_ip(valor)
-                if match_local:
-                    enrich_obj = Enrichment(reputacion="malicioso", fuente=f"Local Blocklist ({match_local})", tags=[match_local])
             elif tipo == "dominio":
                 match_local = await self.feeds.check_domain(valor)
-                if match_local:
-                    enrich_obj = Enrichment(reputacion="malicioso", fuente=f"Local Blocklist ({match_local})", tags=[match_local])
+            elif tipo == "url":
+                match_local = await self.feeds.check_misp_url(evento.externo.valor)
+                if not match_local:
+                    match_local = await self.feeds.check_domain(valor)
+            elif tipo == "hash":
+                match_local = await self.feeds.check_misp_hash(evento.externo.valor)
+
+            if match_local:
+                if match_local.startswith("misp_"):
+                    if match_local == "misp_domains":
+                        meta_v = await self.feeds.resolve_misp_domain_match(valor) or valor
+                    elif match_local == "misp_urls":
+                        meta_v = evento.externo.valor.strip()
+                    elif match_local == "misp_hashes":
+                        meta_v = evento.externo.valor.strip().lower()
+                    else:
+                        meta_v = valor
+                    enrich_obj = await self._enrichment_from_misp(meta_v)
+                else:
+                    enrich_obj = Enrichment(
+                        reputacion="malicioso",
+                        fuente=f"Local Blocklist ({match_local})",
+                        tags=[match_local],
+                    )
 
             # PASO 4: Consultar APIs
             if not enrich_obj:

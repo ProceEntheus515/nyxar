@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import uuid
 import asyncio
 import redis.asyncio as redis
 from typing import Optional, List, Callable, Any, Tuple
@@ -15,6 +17,7 @@ class RedisBus:
     CACHE_PREFIX_BASELINE = "baseline:"
     CACHE_TTL_ENRICH = 86400       # 24 horas
     CACHE_TTL_BASELINE = 3600      # 1 hora
+    MISP_HITS_ZSET = "misp:hits"
 
     def __init__(self):
         self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
@@ -106,6 +109,31 @@ class RedisBus:
     async def cache_exists(self, key: str) -> bool:
         async def op():
             return await self.client.exists(key) > 0
+        return await self._retry_operation(op)
+
+    async def cache_expire(self, key: str, ttl: int) -> None:
+        """Renueva TTL de una clave sin cambiar el valor (útil para misp:meta)."""
+        async def op():
+            await self.client.expire(key, ttl)
+        await self._retry_operation(op)
+
+    async def misp_hit_record(self) -> None:
+        """Registra un hit de enrichment MISP en ventana deslizante 24h (ZSET por timestamp)."""
+        async def op():
+            now = time.time()
+            cutoff = now - 86400
+            member = f"{now:.6f}:{uuid.uuid4().hex}"
+            await self.client.zadd(self.MISP_HITS_ZSET, {member: now})
+            await self.client.zremrangebyscore(self.MISP_HITS_ZSET, "-inf", cutoff)
+        await self._retry_operation(op)
+
+    async def misp_hits_count_24h(self) -> int:
+        """Cantidad de hits MISP registrados en las últimas 24h (tras limpiar entradas viejas)."""
+        async def op():
+            now = time.time()
+            cutoff = now - 86400
+            await self.client.zremrangebyscore(self.MISP_HITS_ZSET, "-inf", cutoff)
+            return int(await self.client.zcard(self.MISP_HITS_ZSET))
         return await self._retry_operation(op)
 
     # --- SETS (Blocklists) ---

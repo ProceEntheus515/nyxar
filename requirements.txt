@@ -14,7 +14,7 @@ pydantic
 # --- collector ---
 watchdog
 
-# --- enricher ---
+# --- enricher + misp_connector ---
 httpx
 schedule
 

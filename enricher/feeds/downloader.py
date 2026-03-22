@@ -12,6 +12,14 @@ from shared.redis_bus import RedisBus
 
 logger = get_logger("enricher.feeds.downloader")
 
+MISP_BLOCKLISTS = [
+    "blocklist:misp_ips",
+    "blocklist:misp_domains",
+    "blocklist:misp_urls",
+    "blocklist:misp_hashes",
+]
+
+
 class FeedDownloader:
     
     FEEDS = {
@@ -45,6 +53,10 @@ class FeedDownloader:
     def __init__(self, redis_bus: RedisBus):
         self.redis_bus = redis_bus
         self._cached_cidrs = {}
+
+    async def _misp_meta_ok(self, valor: str) -> bool:
+        meta = await self.redis_bus.cache_get(f"misp:meta:{valor}")
+        return meta is not None
 
     async def start_scheduler(self) -> None:
         """Loop infinito de actualización horaria."""
@@ -190,6 +202,8 @@ class FeedDownloader:
             if any(target in network for network in redes):
                 return cidr_list.replace("blocklist:", "")
 
+        if await r.sismember("blocklist:misp_ips", ip) and await self._misp_meta_ok(ip):
+            return "misp_ips"
         return None
 
     async def check_domain(self, domain: str) -> Optional[str]:
@@ -210,16 +224,56 @@ class FeedDownloader:
         for p in permutations:
             pipe.sismember("blocklist:urlhaus", p)
             pipe.sismember("blocklist:threatfox", p)
-            
+            pipe.sismember("blocklist:misp_domains", p)
+
         resultados = await pipe.execute()
-        
-        # Recorremos la pipeline de a pares {urlhaus, threatfox}
+
         for idx, perm in enumerate(permutations):
-            is_urlhaus = resultados[idx*2]
-            is_threatfox = resultados[idx*2 + 1]
-            if is_urlhaus: return "urlhaus_domains"
-            if is_threatfox: return "threatfox_iocs"
-            
+            b = idx * 3
+            if resultados[b]:
+                return "urlhaus_domains"
+            if resultados[b + 1]:
+                return "threatfox_iocs"
+            if resultados[b + 2] and await self._misp_meta_ok(perm):
+                return "misp_domains"
+
+        return None
+
+    async def resolve_misp_domain_match(self, domain: str) -> Optional[str]:
+        """Devuelve el sufijo que matchea en MISP con metadata vigente (clave para misp:meta)."""
+        domain = domain.lower().strip()
+        parts = domain.split(".")
+        if len(parts) < 2:
+            return None
+        r = self.redis_bus.client
+        if not r:
+            return None
+        for i in range(len(parts) - 1):
+            p = ".".join(parts[i:])
+            if await r.sismember("blocklist:misp_domains", p) and await self._misp_meta_ok(p):
+                return p
+        return None
+
+    async def check_misp_url(self, url: str) -> Optional[str]:
+        r = self.redis_bus.client
+        if not r:
+            return None
+        u = url.strip()
+        if not u:
+            return None
+        if await r.sismember("blocklist:misp_urls", u) and await self._misp_meta_ok(u):
+            return "misp_urls"
+        return None
+
+    async def check_misp_hash(self, h: str) -> Optional[str]:
+        r = self.redis_bus.client
+        if not r:
+            return None
+        hl = h.strip().lower()
+        if not hl:
+            return None
+        if await r.sismember("blocklist:misp_hashes", hl) and await self._misp_meta_ok(hl):
+            return "misp_hashes"
         return None
 
     async def get_stats(self) -> dict:
