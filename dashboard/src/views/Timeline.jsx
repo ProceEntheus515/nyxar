@@ -6,54 +6,72 @@ import RiskBadge from '../components/ui/RiskBadge';
 import AreaBadge from '../components/ui/AreaBadge';
 import MonoText from '../components/ui/MonoText';
 import { useStore } from '../store';
+import { normalizeSourceKey, SOURCE_COLORS } from '../lib/colors';
 
-// SVGs Profesionales para Fuentes
+const DEFAULT_SOURCE_STROKE = 'var(--base-subtle)';
+
+function sourceStroke(source) {
+  const key = normalizeSourceKey(source);
+  if (key && SOURCE_COLORS[key]) return SOURCE_COLORS[key].color;
+  return DEFAULT_SOURCE_STROKE;
+}
+
+/** Icono por fuente; el color sale de SOURCE_COLORS para consistencia con el design system. */
 const SourceIcon = ({ source }) => {
-  const s = (source || '').toLowerCase();
-  if (s.includes('dns')) {
+  const key = normalizeSourceKey(source);
+  const stroke = sourceStroke(source);
+
+  if (key === 'dns') {
     return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="16" x2="12" y2="12"></line>
-        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
       </svg>
     );
   }
-  if (s.includes('proxy') || s.includes('squid')) {
+  if (key === 'proxy') {
     return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-info)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-        <line x1="6" y1="6" x2="6.01" y2="6"></line>
-        <line x1="6" y1="18" x2="6.01" y2="18"></line>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+        <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+        <line x1="6" y1="6" x2="6.01" y2="6" />
+        <line x1="6" y1="18" x2="6.01" y2="18" />
       </svg>
     );
   }
-  if (s.includes('firewall')) {
+  if (key === 'firewall') {
     return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-critical)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-        <line x1="3" y1="9" x2="21" y2="9"></line>
-        <line x1="3" y1="15" x2="21" y2="15"></line>
-        <line x1="9" y1="9" x2="9" y2="21"></line>
-        <line x1="15" y1="3" x2="15" y2="15"></line>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+        <line x1="3" y1="9" x2="21" y2="9" />
+        <line x1="3" y1="15" x2="21" y2="15" />
+        <line x1="9" y1="9" x2="9" y2="21" />
+        <line x1="15" y1="3" x2="15" y2="15" />
       </svg>
     );
   }
-  if (s.includes('wazuh') || s.includes('endpoint')) {
+  if (key === 'wazuh' || key === 'endpoint') {
     return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-        <polyline points="2 17 12 22 22 17"></polyline>
-        <polyline points="2 12 12 17 22 12"></polyline>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+        <polyline points="2 17 12 22 22 17" />
+        <polyline points="2 12 12 17 22 12" />
+      </svg>
+    );
+  }
+  if (key === 'misp') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <polygon points="12 2 20 6 20 14 12 18 4 14 4 6 12 2" />
       </svg>
     );
   }
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-sec)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"></circle>
-      <polyline points="12 16 16 12 12 8"></polyline>
-      <line x1="8" y1="12" x2="16" y2="12"></line>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 16 16 12 12 8" />
+      <line x1="8" y1="12" x2="16" y2="12" />
     </svg>
   );
 };
@@ -157,6 +175,7 @@ export default function Timeline() {
           <option value="proxy">Proxy</option>
           <option value="firewall">Firewall</option>
           <option value="wazuh">Wazuh</option>
+          <option value="misp">MISP</option>
         </select>
       </div>
 
