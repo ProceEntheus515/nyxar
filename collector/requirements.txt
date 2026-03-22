@@ -1,0 +1,4 @@
+watchdog
+redis
+pydantic
+asyncio

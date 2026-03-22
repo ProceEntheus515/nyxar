@@ -1,0 +1,10 @@
+# Archivos generados y dependencias
+__pycache__/
+*.pyc
+node_modules/
+dist/
+
+# Entorno virtual y secretos
+.env
+venv/
+env/

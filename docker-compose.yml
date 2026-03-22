@@ -1,0 +1,138 @@
+version: '3.8'
+
+networks:
+  cyberpulse-net:
+    driver: bridge
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file: .env
+    networks:
+      - cyberpulse-net
+
+  mongodb:
+    image: mongo:7.0
+    restart: unless-stopped
+    volumes:
+      - ./data/mongodb:/data/db
+      - ./data/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand({ping:1})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file: .env
+    networks:
+      - cyberpulse-net
+
+  pihole:
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "8080:80"
+    volumes:
+      - ./data/pihole/logs:/var/log/pihole
+    env_file: .env
+    networks:
+      - cyberpulse-net
+
+  collector:
+    build: ./collector
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./data/pihole/logs:/logs/dns:ro
+    env_file: .env
+    networks:
+      - cyberpulse-net
+
+  enricher:
+    build: ./enricher
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - cyberpulse-net
+
+  correlator:
+    build: ./correlator
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - cyberpulse-net
+
+  ai_analyst:
+    build: ./ai_analyst
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - cyberpulse-net
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - cyberpulse-net
+
+  simulator:
+    build: ./simulator
+    restart: unless-stopped
+    profiles:
+      - lab
+    depends_on:
+      - collector
+      - redis
+    env_file: .env
+    networks:
+      - cyberpulse-net
+
+  dashboard:
+    build: ./dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    env_file: .env
+    networks:
+      - cyberpulse-net
