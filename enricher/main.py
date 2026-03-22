@@ -7,7 +7,10 @@ from urllib.parse import urlparse
 
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
+from shared.mongo_client import MongoClient
 from api.models import Evento, Enrichment
+
+from ad_connector.resolver import IdentityResolver
 
 from enricher.cache import EnrichmentCache
 from enricher.feeds.downloader import FeedDownloader
@@ -27,6 +30,8 @@ class EnrichmentEngine:
         self.group_name = "enricher-group"
         self.consumer_name = f"enricher-{uuid.uuid4().hex[:8]}"
         self._processed = 0
+        self.mongo_client = MongoClient()
+        self.identity_resolver: Optional[IdentityResolver] = None
 
     def _extraer_target(self, evento: Evento) -> Tuple[Optional[str], Optional[str]]:
         """Extrae el valor a enriquecer y clasifica el tipo"""
@@ -173,7 +178,10 @@ class EnrichmentEngine:
         try:
             # Rehidratar el model desde raw log parseado por normalizer
             from collector.normalizer import Normalizer
-            norm = Normalizer(self.redis_bus)
+            norm = Normalizer(
+                self.redis_bus,
+                resolver=self.identity_resolver,
+            )
             
             # Nota: el stream RAW trae formates de "dns", "proxy" que ya pasaron por Normalizer en collector?
             # Si el collector ya aplicó Pydantic -> lo leemos.
@@ -200,45 +208,55 @@ class EnrichmentEngine:
     async def run(self):
         logger.info(f"Conectando EnrichmentEngine (Consumer: {self.consumer_name})...")
         await self.redis_bus.connect()
-        
+        await self.mongo_client.connect()
+        self.identity_resolver = IdentityResolver(self.redis_bus, self.mongo_client)
+
         # Lanzar paralelamente el scheduler de listas en este mismo worker
         asyncio.create_task(self.feeds.start_scheduler())
-        
-        while True:
-            try:
-                # Por cada batch de 10
-                eventos = await self.redis_bus.consume_events(
-                    self.redis_bus.STREAM_RAW,
-                    self.group_name,
-                    self.consumer_name,
-                    count=10
-                )
-                
-                if not eventos:
-                    await asyncio.sleep(0.1)
-                    continue
-                    
-                # 1. Procesar paralelo
-                tasks = []
-                for b_msg_id, raw_dict in eventos:
-                    tasks.append(self._procesar_evento(b_msg_id, raw_dict))
-                    
-                resultados_msg_id = await asyncio.gather(*tasks, return_exceptions=True)
-                
-                # 3. ACKs
-                ids_a_ackear = [r for r in resultados_msg_id if isinstance(r, bytes)]
-                if reversed:
-                    await self.redis_bus.acknowledge(self.redis_bus.STREAM_RAW, self.group_name, ids_a_ackear)
-                
-                # 4. Throughput logger
-                self._processed += len(ids_a_ackear)
-                if self._processed >= 100:
-                    logger.info(f"Enricher Throughput: 100 eventos despachados hacia STREAMS_ENRICHED.")
-                    self._processed = 0
-                    
-            except Exception as e:
-                logger.error(f"Error loop principal Enricher: {e}")
-                await asyncio.sleep(2)
+
+        try:
+            while True:
+                try:
+                    eventos = await self.redis_bus.consume_events(
+                        self.redis_bus.STREAM_RAW,
+                        self.group_name,
+                        self.consumer_name,
+                        count=10,
+                    )
+
+                    if not eventos:
+                        await asyncio.sleep(0.1)
+                        continue
+
+                    tasks = []
+                    for b_msg_id, raw_dict in eventos:
+                        tasks.append(self._procesar_evento(b_msg_id, raw_dict))
+
+                    resultados_msg_id = await asyncio.gather(*tasks, return_exceptions=True)
+
+                    ids_a_ackear = [
+                        r for r in resultados_msg_id if not isinstance(r, BaseException)
+                    ]
+                    if ids_a_ackear:
+                        await self.redis_bus.acknowledge(
+                            self.redis_bus.STREAM_RAW,
+                            self.group_name,
+                            *[str(x) for x in ids_a_ackear],
+                        )
+
+                    self._processed += len(ids_a_ackear)
+                    if self._processed >= 100:
+                        logger.info(
+                            "Enricher Throughput: 100 eventos despachados hacia STREAMS_ENRICHED."
+                        )
+                        self._processed = 0
+
+                except Exception as e:
+                    logger.error(f"Error loop principal Enricher: {e}")
+                    await asyncio.sleep(2)
+        finally:
+            await self.redis_bus.disconnect()
+            await self.mongo_client.disconnect()
 
 if __name__ == "__main__":
     from shared.logger import get_logger

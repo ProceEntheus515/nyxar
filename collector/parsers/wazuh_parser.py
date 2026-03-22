@@ -1,6 +1,7 @@
-import os
+import asyncio
 import hashlib
-from typing import Dict, Any
+import os
+from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -8,17 +9,28 @@ import uvicorn
 
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
+from shared.wazuh_logons import insert_wazuh_logon_if_applicable, logon_rule_ids
 
 logger = get_logger("collector.parsers.wazuh")
+
+SESSION_CACHE_PREFIX = "identity:session:"
+
+
+def _logoff_rule_ids() -> set:
+    raw = os.getenv("WAZUH_LOGOFF_RULE_IDS", "").strip()
+    return {x.strip() for x in raw.split(",") if x.strip()}
+
 
 class WazuhParser:
     """
     Expone un microservicio FastAPI para recibir webhooks nativos desde Wazuh Manager.
     Convierte el formato alerta JSON directamente y lo pushea a Redis.
+    Opcionalmente persiste logons en Mongo (wazuh_logons) para mapa ip->usuario.
     """
 
-    def __init__(self, redis_bus: RedisBus):
+    def __init__(self, redis_bus: RedisBus, mongo_client: Optional[Any] = None):
         self.redis_bus = redis_bus
+        self.mongo_client = mongo_client
         port_env = os.getenv("WAZUH_WEBHOOK_PORT", "9000")
         self.port = int(port_env)
         self.app = FastAPI(title="Wazuh Webhook Parser")
@@ -43,9 +55,28 @@ class WazuhParser:
                     h_str = hashlib.md5(f"{ts}-{agent_ip}-{rule_id}".encode()).hexdigest()
                     
                     if not await self._is_duplicate(h_str):
+                        if (
+                            self.mongo_client is not None
+                            and self.mongo_client.db is not None
+                        ):
+                            try:
+                                await insert_wazuh_logon_if_applicable(
+                                    self.mongo_client.db,
+                                    payload,
+                                )
+                            except Exception as ex:
+                                logger.error(
+                                    "No se pudo persistir wazuh_logon: %s",
+                                    ex,
+                                )
                         bus_payload = {"source": "wazuh", "raw": event_dict}
                         await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, bus_payload)
-                        
+
+                        await self._invalidate_identity_session_cache_if_needed(
+                            payload,
+                            str(agent_ip).strip(),
+                        )
+
                         self._processed_count += 1
                         if self._processed_count % 1000 == 0:
                             logger.info(f"Parser Wazuh procesó {self._processed_count} eventos válidos")
@@ -82,6 +113,30 @@ class WazuhParser:
             
         raw_json["mapped_risk_score"] = risk_score
         return raw_json
+
+    async def _invalidate_identity_session_cache_if_needed(
+        self,
+        payload: Dict[str, Any],
+        agent_ip: str,
+    ) -> None:
+        if not agent_ip or agent_ip.lower() in ("unknown", ""):
+            return
+        rule = payload.get("rule") or {}
+        rid = str(rule.get("id", "")).strip()
+        desc = (rule.get("description") or "").lower()
+        logoffs = _logoff_rule_ids()
+        try:
+            if rid and rid in logon_rule_ids():
+                await self.redis_bus.cache_delete(f"{SESSION_CACHE_PREFIX}{agent_ip}")
+                return
+            if logoffs:
+                if rid in logoffs:
+                    await self.redis_bus.cache_delete(f"{SESSION_CACHE_PREFIX}{agent_ip}")
+                return
+            if "4634" in desc:
+                await self.redis_bus.cache_delete(f"{SESSION_CACHE_PREFIX}{agent_ip}")
+        except Exception as ex:
+            logger.warning("invalidate identity:session %s: %s", agent_ip, ex)
 
     async def _is_duplicate(self, h_str: str) -> bool:
         key = f"dedup:wazuh:{h_str}"

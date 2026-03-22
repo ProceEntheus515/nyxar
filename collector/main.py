@@ -3,6 +3,7 @@ import os
 import signal
 
 from shared.logger import get_logger
+from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
 
 # Modulos
@@ -17,6 +18,8 @@ async def main():
     logger.info("Inicializando CyberPulse Collector...")
     redis_bus = RedisBus()
     await redis_bus.connect()
+    mongo_client = MongoClient()
+    await mongo_client.connect()
     
     # Rutas por defecto del host, pueden venir de .env
     pihole_path = os.getenv("LOG_DNS_PATH", "/logs/dns/pihole.log")
@@ -27,7 +30,7 @@ async def main():
     dns = DnsParser(log_path=pihole_path, redis_bus=redis_bus)
     proxy = ProxyParser(log_path=proxy_path, redis_bus=redis_bus)
     fw = FirewallParser(log_path=firewall_path, redis_bus=redis_bus)
-    wazuh = WazuhParser(redis_bus=redis_bus)
+    wazuh = WazuhParser(redis_bus=redis_bus, mongo_client=mongo_client)
     
     # Manejo graceful shutdown
     loop = asyncio.get_event_loop()
@@ -56,6 +59,7 @@ async def main():
         pass
     finally:
         await redis_bus.disconnect()
+        await mongo_client.disconnect()
         logger.info("Collector finalizado limpiamente.")
 
 if __name__ == "__main__":

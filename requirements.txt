@@ -23,3 +23,6 @@ anthropic
 
 # --- simulator ---
 faker
+
+# --- ad_connector ---
+ldap3

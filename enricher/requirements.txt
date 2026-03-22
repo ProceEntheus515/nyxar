@@ -1,4 +1,4 @@
 httpx
 redis
-asyncio
+motor
 schedule

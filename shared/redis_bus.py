@@ -117,6 +117,40 @@ class RedisBus:
             await self.client.expire(key, ttl)
         await self._retry_operation(op)
 
+    async def cache_delete(self, key: str) -> None:
+        async def op():
+            await self.client.delete(key)
+        await self._retry_operation(op)
+
+    async def cache_scan_keys(
+        self,
+        pattern: str,
+        max_rounds: int = 256,
+        count_per_round: int = 256,
+    ) -> List[str]:
+        """
+        SCAN (no KEYS) para patrones como identity:session:*.
+        Limita vueltas para no bloquear el event loop indefinidamente.
+        """
+
+        async def op():
+            keys_local: List[str] = []
+            cursor = 0
+            rounds = 0
+            while rounds < max_rounds:
+                cursor, batch = await self.client.scan(
+                    cursor=cursor,
+                    match=pattern,
+                    count=count_per_round,
+                )
+                keys_local.extend(batch)
+                rounds += 1
+                if cursor == 0:
+                    break
+            return keys_local
+
+        return await self._retry_operation(op)
+
     async def misp_hit_record(self) -> None:
         """Registra un hit de enrichment MISP en ventana deslizante 24h (ZSET por timestamp)."""
         async def op():

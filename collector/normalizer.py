@@ -1,17 +1,48 @@
 import logging
 import ipaddress
-from typing import Optional, Any
+from typing import Any, Optional, TYPE_CHECKING
 from datetime import datetime, timezone
 
 from api.models import Evento, EventoInterno, EventoExterno
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
 
+if TYPE_CHECKING:
+    from ad_connector.resolver import IdentityResolver
+
 logger = get_logger("collector.normalizer")
 
+
+def _event_field_from_resolver(val: str) -> str:
+    """El resolver usa 'desconocido'; EventoInterno y tests esperan 'unknown'."""
+    s = (val or "").strip()
+    if not s or s == "desconocido":
+        return "unknown"
+    return s
+
+
 class Normalizer:
-    def __init__(self, redis_bus: RedisBus):
+    def __init__(
+        self,
+        redis_bus: RedisBus,
+        resolver: Optional["IdentityResolver"] = None,
+    ):
         self.redis_bus = redis_bus
+        self.resolver = resolver
+
+    async def _resolve_internal(self, ip: str) -> dict:
+        if self.resolver is not None:
+            ident = await self.resolver.resolve(ip)
+            return {
+                "hostname": _event_field_from_resolver(ident.get("hostname") or ""),
+                "usuario": _event_field_from_resolver(ident.get("usuario") or ""),
+                "area": _event_field_from_resolver(ident.get("area") or ""),
+            }
+        return {
+            "hostname": await self._resolver_hostname(ip),
+            "usuario": await self._resolver_usuario(ip),
+            "area": await self._resolver_area(ip),
+        }
 
     async def _resolver_hostname(self, ip: str) -> str:
         """Resuelve el hostname de una IP interna usando Redis."""
@@ -126,10 +157,9 @@ class Normalizer:
         if not client_ip or not domain:
             return None
             
-        hostname = await self._resolver_hostname(client_ip)
-        usuario = await self._resolver_usuario(client_ip)
-        area = await self._resolver_area(client_ip)
-        
+        r = await self._resolve_internal(client_ip)
+        hostname, usuario, area = r["hostname"], r["usuario"], r["area"]
+
         tipo_accion = "block" if status.upper() in ["BLOCKED", "NXDOMAIN"] else "query"
 
         return Evento(
@@ -156,10 +186,9 @@ class Normalizer:
         if not client_ip or not url:
             return None
             
-        hostname = await self._resolver_hostname(client_ip)
-        usuario = await self._resolver_usuario(client_ip)
-        area = await self._resolver_area(client_ip)
-        
+        r = await self._resolve_internal(client_ip)
+        hostname, usuario, area = r["hostname"], r["usuario"], r["area"]
+
         # Extraer dominio de la URL para el externo
         domain = url.split("://")[-1].split("/")[0] if "://" in url else url
 
@@ -203,10 +232,9 @@ class Normalizer:
             client_ip = src_ip
             externo_ip = dst_ip
 
-        hostname = await self._resolver_hostname(client_ip)
-        usuario = await self._resolver_usuario(client_ip)
-        area = await self._resolver_area(client_ip)
-        
+        r = await self._resolve_internal(client_ip)
+        hostname, usuario, area = r["hostname"], r["usuario"], r["area"]
+
         tipo_accion = "block" if action != "ALLOW" else "request"
 
         return Evento(
@@ -238,8 +266,11 @@ class Normalizer:
         if not client_ip:
             return None
             
-        usuario = await self._resolver_usuario(client_ip)
-        area = await self._resolver_area(client_ip)
+        r = await self._resolve_internal(client_ip)
+        usuario, area = r["usuario"], r["area"]
+        resolved_host = r["hostname"]
+        if resolved_host != "unknown":
+            hostname = resolved_host
 
         return Evento(
             timestamp=ts,
@@ -267,7 +298,8 @@ class Normalizer:
         if not client_ip:
             return None
             
-        area = await self._resolver_area(client_ip)
+        r = await self._resolve_internal(client_ip)
+        area = r["area"]
 
         return Evento(
             timestamp=ts,
