@@ -1,0 +1,115 @@
+.card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--bg-card);
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: border-color var(--duration-fast, 150ms) var(--ease-out);
+}
+
+.cardSelected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.25);
+}
+
+.cardStruck {
+  opacity: 0.55;
+}
+
+.cardStruck .title {
+  text-decoration: line-through;
+}
+
+.mainHit {
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.mainHit:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.rowTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.mitre {
+  font-family: var(--font-data, monospace);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--color-primary);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: clamp(0.8rem, 1.6vw, 0.95rem);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-main);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.estado {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-sec);
+}
+
+.badgeThreat {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 71, 87, 0.2);
+  color: var(--color-critical);
+  border: 1px solid var(--color-critical);
+}
+
+.time {
+  font-size: 11px;
+  color: var(--text-sec);
+  font-family: var(--font-data, monospace);
+}
+
+.actions {
+  padding: 0 12px 12px;
+}
+
+.btnRun {
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--color-primary);
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: var(--text-sm, 0.875rem);
+  cursor: pointer;
+}
+
+.btnRun:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

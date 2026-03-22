@@ -1,0 +1,207 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  font-family: var(--font-ui, sans-serif);
+}
+
+.advancedBadge {
+  align-self: flex-start;
+  margin-bottom: clamp(10px, 2vw, 14px);
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  border: 1px solid rgba(123, 104, 238, 0.45);
+  color: var(--color-info);
+  background: rgba(123, 104, 238, 0.12);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 35%) 1fr;
+  gap: clamp(12px, 2vw, 20px);
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--bg-card);
+  padding: clamp(12px, 2vw, 16px);
+}
+
+.leftHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1rem, 2.2vw, 1.15rem);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.btnNew {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--color-primary);
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: var(--text-sm, 0.875rem);
+  cursor: pointer;
+}
+
+.btnNew:hover {
+  background: rgba(0, 212, 255, 0.2);
+}
+
+.muted {
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-sec);
+}
+
+.error {
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-critical);
+  margin: 0 0 8px;
+}
+
+.hypList {
+  flex: 1;
+  overflow: auto;
+  min-height: 120px;
+  padding-right: 4px;
+}
+
+.sessionsBlock {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-default);
+  flex-shrink: 0;
+  max-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.subTitle {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-sec);
+}
+
+.sessionUl {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+}
+
+.sessionBtn {
+  width: 100%;
+  text-align: left;
+  padding: 8px 6px;
+  margin-bottom: 4px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.sessionBtn:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sessionId {
+  display: block;
+  font-family: var(--font-data, monospace);
+  font-size: 11px;
+  color: var(--color-primary);
+}
+
+.sessionMeta {
+  font-size: 10px;
+  color: var(--text-sec);
+}
+
+.right {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg, 12px);
+  background: rgba(22, 27, 34, 0.6);
+  padding: clamp(14px, 2.5vw, 22px);
+}
+
+.emptyRight {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-sec);
+  font-size: var(--text-sm, 0.875rem);
+  text-align: center;
+  padding: 24px;
+}
+
+.detailHead {
+  margin-bottom: 20px;
+}
+
+.detailTitle {
+  margin: 0 0 8px;
+  font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.mitreBadge {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-family: var(--font-data, monospace);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  color: var(--color-primary);
+}
+
+.detailDesc {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.55;
+  color: var(--text-sec);
+}
+
+.resultsSection {
+  margin-top: 8px;
+}
+
+.sectionHeading {
+  margin: 0 0 10px;
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  font-weight: 600;
+  color: var(--text-main);
+}

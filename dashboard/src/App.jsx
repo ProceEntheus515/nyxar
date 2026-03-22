@@ -21,6 +21,7 @@ const TAB_TITLES = {
 const NetworkMap = React.lazy(() => import('./views/NetworkMap'))
 const Timeline = React.lazy(() => import('./views/Timeline'))
 const Identities = React.lazy(() => import('./views/Identities'))
+const HuntingView = React.lazy(() => import('./views/HuntingView'))
 const AttackInjector = React.lazy(() => import('./views/AttackInjector'))
 
 function LoadingView() {
@@ -85,6 +86,7 @@ export default function App() {
             {activeTab === 'map' && <NetworkMap />}
             {activeTab === 'timeline' && <Timeline />}
             {activeTab === 'identities' && <Identities />}
+            {activeTab === 'hunting' && <HuntingView onNavigate={setActiveTab} />}
           </Suspense>
         </main>
 

@@ -7,6 +7,7 @@ const NAV = [
   { id: 'map', label: 'Network Graph', short: 'N' },
   { id: 'timeline', label: 'Live Events Timeline', short: 'T' },
   { id: 'identities', label: 'Risk Identities', short: 'I' },
+  { id: 'hunting', label: 'Threat Hunting', short: 'H' },
 ]
 
 export function Sidebar({ activeTab, onTabChange }) {

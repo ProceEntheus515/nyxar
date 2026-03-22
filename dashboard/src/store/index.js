@@ -8,7 +8,11 @@ export const useStore = create((set, get) => ({
   aiMemos: [],          // memos de AI
   stats: {},            // estadísticas generales
   isLabMode: false,     // modo simulación
-  
+  /** Si se setea, Timeline intenta hacer scroll a ese evento y luego se limpia. */
+  timelineFocusEventId: null,
+
+  setTimelineFocusEventId: (id) => set({ timelineFocusEventId: id || null }),
+
   addEvent: (event) => set((state) => ({ 
     events: [event, ...state.events].slice(0, 500) 
   })),

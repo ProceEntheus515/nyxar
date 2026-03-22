@@ -1773,12 +1773,12 @@ NO HAGAS:
 
 ---
 
-## 📊 MÓDULO REPORTES AUTOMÁTICOS
+## MÓDULO REPORTES AUTOMÁTICOS
 
 ---
 
 ### PROMPT V12 — Report Dev
-**Rol:** 📊 Report Developer  
+**Rol:** Report Developer  
 **Componente:** Generador de reportes PDF  
 **Entregable:** `reporter/generator.py` y templates
 
@@ -2016,12 +2016,12 @@ NO HAGAS:
 
 ---
 
-## 🔔 MÓDULO NOTIFICACIONES
+## MÓDULO NOTIFICACIONES
 
 ---
 
 ### PROMPT V14 — Integration Dev
-**Rol:** 🔔 Integration Developer  
+**Rol:** Integration Developer  
 **Componente:** Motor central de notificaciones  
 **Entregable:** `notifier/engine.py`
 

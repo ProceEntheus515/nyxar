@@ -1,0 +1,28 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: clamp(2px, 0.3vw, 4px);
+  font-family: var(--font-data, monospace);
+}
+
+.dotOn,
+.dotOff {
+  width: clamp(6px, 0.5vw, 8px);
+  height: clamp(6px, 0.5vw, 8px);
+  border-radius: 50%;
+}
+
+.dotOn {
+  background: var(--color-primary);
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.45);
+}
+
+.dotOff {
+  background: var(--border-default);
+}
+
+.num {
+  margin-left: 4px;
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-sec);
+}

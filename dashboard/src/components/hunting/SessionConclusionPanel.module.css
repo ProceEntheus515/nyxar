@@ -1,0 +1,122 @@
+.section {
+  margin-bottom: clamp(16px, 3vw, 24px);
+}
+
+.heading {
+  margin: 0 0 10px;
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.muted {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-sec);
+}
+
+.card {
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: var(--radius-lg, 12px);
+  padding: 16px;
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.tag[data-found='yes'] {
+  background: rgba(255, 71, 87, 0.2);
+  color: var(--color-critical);
+  border: 1px solid var(--color-critical);
+}
+
+.tag[data-found='no'] {
+  background: rgba(123, 104, 238, 0.15);
+  color: var(--color-info);
+  border: 1px solid var(--color-info);
+}
+
+.conf {
+  font-size: 11px;
+  font-family: var(--font-data, monospace);
+  color: var(--text-sec);
+}
+
+.conf[data-conf='alta'] {
+  color: var(--color-critical);
+}
+
+.summary {
+  margin: 0 0 12px;
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.55;
+  color: var(--text-main);
+}
+
+.evBlock {
+  margin-top: 12px;
+}
+
+.sub {
+  margin: 0 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-sec);
+}
+
+.evList,
+.iocList {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-main);
+}
+
+.code {
+  font-family: var(--font-data, monospace);
+  font-size: 12px;
+  color: var(--color-primary);
+}
+
+.incidentBox {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.incidentText {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-sec);
+}
+
+.btnOutline {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--color-primary);
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+}

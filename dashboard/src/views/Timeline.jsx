@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { List, useListRef } from 'react-window';
 import Card from '../components/ui/Card';
 import TimeAgo from '../components/ui/TimeAgo';
@@ -110,7 +110,7 @@ function TimelineRow({ index, style, ariaAttributes, filteredEvents, alerts }) {
 }
 
 export default function Timeline() {
-  const { events, alerts } = useStore();
+  const { events, alerts, timelineFocusEventId, setTimelineFocusEventId } = useStore();
   const [filterSource, setFilterSource] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   const listRef = useListRef();
@@ -124,6 +124,15 @@ export default function Timeline() {
   }, [events, filterSource]);
 
   const rowProps = useMemo(() => ({ filteredEvents, alerts }), [filteredEvents, alerts]);
+
+  useEffect(() => {
+    if (!timelineFocusEventId || !filteredEvents.length) return;
+    const idx = filteredEvents.findIndex((e) => e.id === timelineFocusEventId);
+    if (idx >= 0) {
+      listRef.current?.scrollToRow({ index: idx, align: 'smart', behavior: 'smooth' });
+    }
+    setTimelineFocusEventId(null);
+  }, [timelineFocusEventId, filteredEvents, setTimelineFocusEventId]);
 
   const handleRowsRendered = useCallback((visible) => {
     setIsScrolled(visible.startIndex > 0);

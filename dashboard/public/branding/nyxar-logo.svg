@@ -1,32 +1,32 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
-  NYXAR  marca (solo hexágono + nodos). Uso: sidebar junto al texto NYXAR en UI.
-  Identidad: hexágono eficiente, un nodo activo (cian #38B2CC), resto en gris azulado.
--->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 82" role="img" aria-label="NYXAR">
+<svg width="200" height="240" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="nyxar-node-glow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="blur" />
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
       <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
   </defs>
-  <!-- Hexágono regular, vértice superior; trazo discreto -->
-  <polygon
-    fill="none"
-    stroke="#6b7f94"
-    stroke-width="1.15"
-    stroke-linejoin="round"
-    points="50,15 69.92,26.5 69.92,49.5 50,61 30.08,49.5 30.08,26.5"
-  />
-  <!-- Nodos en vértices; el superior-derecho lleva glow (vigilancia / foco operativo) -->
-  <circle cx="50" cy="15" r="2.35" fill="#6b7f94" />
-  <circle cx="69.92" cy="26.5" r="2.55" fill="#38b2cc" filter="url(#nyxar-node-glow)" />
-  <circle cx="69.92" cy="49.5" r="2.35" fill="#6b7f94" />
-  <circle cx="50" cy="61" r="2.35" fill="#6b7f94" />
-  <circle cx="30.08" cy="49.5" r="2.35" fill="#6b7f94" />
-  <circle cx="30.08" cy="26.5" r="2.35" fill="#6b7f94" />
+  
+  <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" 
+           fill="none" 
+           stroke="#38B2CC" 
+           stroke-width="1.5" 
+           stroke-opacity="0.6"/>
+  
+  <circle cx="50" cy="10" r="3" fill="#38B2CC" />
+  <circle cx="90" cy="30" r="4" fill="#38B2CC" filter="url(#glow)" /> <circle cx="90" cy="70" r="3" fill="#38B2CC" />
+  <circle cx="50" cy="90" r="3" fill="#38B2CC" />
+  <circle cx="10" cy="70" r="3" fill="#38B2CC" />
+  <circle cx="10" cy="30" r="3" fill="#38B2CC" />
+  
+  <text x="50" y="115" 
+        font-family="monospace" 
+        font-size="10" 
+        fill="#38B2CC" 
+        text-anchor="middle" 
+        font-weight="bold">
+    [ NYXAR ]
+  </text>
 </svg>

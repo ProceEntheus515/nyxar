@@ -71,6 +71,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+@keyframes hunt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.huntSpin {
+  animation: hunt-spin 0.85s linear infinite;
+  transform-origin: center;
+}
+
 * {
   box-sizing: border-box;
 }
