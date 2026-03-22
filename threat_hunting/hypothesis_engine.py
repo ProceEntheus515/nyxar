@@ -276,3 +276,79 @@ class HypothesisEngine:
             crear_incidente=bool(parsed.get("crear_incidente")),
             resumen=resumen,
         )
+
+    async def formalize_manual_hypothesis(
+        self,
+        descripcion: str,
+        *,
+        hunter: str = "analista_manual",
+        persist: bool = True,
+    ) -> Hypothesis | None:
+        """
+        Convierte texto libre del analista en un objeto Hypothesis vía Claude.
+        Retorna None si falta API key, JSON inválido o título duplicado activo.
+        """
+        descripcion = (descripcion or "").strip()
+        if not descripcion:
+            return None
+
+        path = self._prompt_dir / "formalize_hypothesis.txt"
+        template = path.read_text(encoding="utf-8") if path.is_file() else ""
+        if not template:
+            logger.warning("HypothesisEngine: falta formalize_hypothesis.txt")
+            return None
+
+        user = template.replace("{descripcion}", descripcion)
+        if not self.api_key:
+            logger.warning("HypothesisEngine.formalize_manual_hypothesis: falta ANTHROPIC_API_KEY")
+            return None
+
+        client = anthropic.AsyncAnthropic(api_key=self.api_key)
+        try:
+            resp = await client.messages.create(
+                model=self.model,
+                max_tokens=2048,
+                temperature=0.2,
+                system="Solo JSON válido según el template, sin markdown.",
+                messages=[{"role": "user", "content": user}],
+            )
+            raw = resp.content[0].text if resp.content else "{}"
+            data = json.loads(_strip_json_fences(raw))
+        except Exception as e:
+            logger.error("HypothesisEngine.formalize_manual_hypothesis: %s", e)
+            return None
+
+        if not isinstance(data, dict):
+            return None
+
+        titulo = (data.get("titulo") or "").strip()
+        if not titulo:
+            return None
+        if await self._titulo_duplicado_activo(titulo):
+            return None
+
+        try:
+            prioridad = int(data.get("prioridad") or 3)
+        except (TypeError, ValueError):
+            prioridad = 3
+        prioridad = max(1, min(5, prioridad))
+
+        qs = data.get("queries_sugeridas") or []
+        if not isinstance(qs, list):
+            qs = []
+
+        hyp = Hypothesis(
+            titulo=titulo,
+            descripcion=(data.get("descripcion") or "").strip(),
+            tecnica_mitre=(data.get("tecnica_mitre") or "").strip() or "T0000",
+            prioridad=prioridad,
+            queries_sugeridas=[str(x) for x in qs if x],
+            hunter=hunter,
+        )
+
+        if persist and self.mongo:
+            doc = hyp.model_dump(mode="json")
+            doc["titulo_normalizado"] = self._normalize_titulo(hyp.titulo)
+            await self.mongo.db[HYPOTHESES_COLLECTION].insert_one(doc)
+
+        return hyp

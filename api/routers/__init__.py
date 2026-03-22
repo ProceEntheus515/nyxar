@@ -7,6 +7,7 @@ from . import ai
 from . import response
 from . import response_proposals
 from . import identity
+from . import hunting
 
 __all__ = [
     "events",
@@ -18,4 +19,5 @@ __all__ = [
     "response",
     "response_proposals",
     "identity",
+    "hunting",
 ]

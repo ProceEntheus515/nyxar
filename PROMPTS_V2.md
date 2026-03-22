@@ -1514,7 +1514,7 @@ NO HAGAS:
 ---
 
 ### PROMPT V10 — AI Engineer
-**Rol:** 🧠 AI Engineer  
+**Rol:** AI Engineer  
 **Componente:** Threat Hunting — query builder y hunter  
 **Entregable:** `threat_hunting/query_builder.py` y `threat_hunting/hunter.py`
 
@@ -1695,7 +1695,7 @@ NO HAGAS:
 ---
 
 ### PROMPT V11 — Frontend Dev
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Componente:** Vista de Threat Hunting en el dashboard  
 **Entregable:** `dashboard/src/views/HuntingView.jsx`
 
