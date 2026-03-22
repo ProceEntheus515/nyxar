@@ -9,12 +9,13 @@ import json
 import os
 import uuid
 from datetime import datetime, time, timezone
-from typing import Optional
+from typing import Literal, Optional
 
-from notifier.channels.email import send_email
-from notifier.channels.whatsapp import send_whatsapp_plain
-from notifier.models import Recipient, SeveridadNotif
+from notifier.channels.email import EmailChannel
+from notifier.channels.whatsapp import WhatsAppChannel
+from notifier.models import NotifMessage, NotifPreferences, Recipient, SeveridadNotif
 from notifier.preferences import load_recipients_from_env
+from notifier.preferences_manager import PreferencesManager
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
@@ -56,6 +57,10 @@ class NotificationEngine:
         self.mongo = MongoClient()
         self._recipients_cache: list[Recipient] = []
         self._running = False
+        self._email_ch = EmailChannel()
+        self._wa_ch = WhatsAppChannel(redis_client_getter=lambda: self.redis_bus.client)
+        self._prefs_manager: Optional[PreferencesManager] = None
+        self._prefs_manager_init_failed: bool = False
 
     def _load_recipients(self) -> list[Recipient]:
         self._recipients_cache = load_recipients_from_env()
@@ -158,13 +163,47 @@ class NotificationEngine:
 
         return admins
 
-    def _select_channels(
+    async def _get_prefs_manager(self) -> Optional[PreferencesManager]:
+        if self._prefs_manager_init_failed:
+            return None
+        if self._prefs_manager is not None:
+            return self._prefs_manager
+        try:
+            await self.mongo.connect()
+            pm = PreferencesManager(self.mongo.db, lambda: self.redis_bus.client)
+            await pm.ensure_indexes()
+            self._prefs_manager = pm
+            return pm
+        except Exception as e:
+            logger.warning("PreferencesManager no disponible, se usan preferencias del recipient: %s", e)
+            self._prefs_manager_init_failed = True
+            return None
+
+    async def _effective_prefs_for_recipient(
+        self,
+        severidad: SeveridadNotif,
+        recipient: Recipient,
+        area_override: Optional[str] = None,
+    ) -> NotifPreferences:
+        pm = await self._get_prefs_manager()
+        if pm is None:
+            return recipient.preferencias
+        area_raw = area_override if area_override is not None else recipient.area
+        area = str(area_raw).strip() if area_raw else None
+        try:
+            return await pm.get_for_recipient(recipient.id, severidad, area=area)
+        except Exception as e:
+            logger.warning("get_for_recipient fallo, fallback .env: %s", e)
+            return recipient.preferencias
+
+    async def _select_channels(
         self,
         severidad: SeveridadNotif,
         recipient: Recipient,
         es_horario_silencio: bool,
+        area_override: Optional[str] = None,
     ) -> list[str]:
-        pref = recipient.preferencias
+        pref = await self._effective_prefs_for_recipient(severidad, recipient, area_override=area_override)
         ch: list[str] = []
 
         if severidad == "info":
@@ -198,28 +237,82 @@ class NotificationEngine:
 
         return ch
 
-    def _wa_safe_body(self, titulo: str) -> str:
-        return f"Alerta en NYXAR: {titulo}. Revisá el dashboard de seguridad para más detalle."
+    @staticmethod
+    def _map_notif_tipo(
+        evento_tipo: str,
+    ) -> Literal["alerta", "reporte", "aprobacion", "resolucion"]:
+        if evento_tipo == "reporte_listo":
+            return "reporte"
+        if evento_tipo == "aprobacion_pendiente":
+            return "aprobacion"
+        if "resolucion" in evento_tipo:
+            return "resolucion"
+        return "alerta"
+
+    def _build_dashboard_link(self, evento_tipo: str, payload: dict) -> Optional[str]:
+        base = (os.getenv("NOTIFY_DASHBOARD_BASE_URL") or "").strip().rstrip("/")
+        if not base:
+            return None
+        if evento_tipo == "aprobacion_pendiente":
+            proposal = payload.get("proposal_id") or payload.get("id")
+            if proposal:
+                return f"{base}/approvals?proposal={proposal}"
+        proposal = payload.get("proposal_id")
+        if proposal:
+            return f"{base}/approvals?proposal={proposal}"
+        iid = payload.get("id") or payload.get("incident_id")
+        if iid:
+            return f"{base}/incidents/{iid}"
+        return base
+
+    def _build_notif_message(
+        self,
+        evento_tipo: str,
+        sev: SeveridadNotif,
+        payload: dict,
+        subject: str,
+        body_email: str,
+    ) -> NotifMessage:
+        tipo = self._map_notif_tipo(evento_tipo)
+        sev_label = str(payload.get("severidad") or sev).strip().upper() or str(sev).upper()
+        link = self._build_dashboard_link(evento_tipo, payload)
+        corto = WhatsAppChannel._truncate_for_whatsapp(str(body_email), 200)
+        raw_attach = payload.get("attachment_path") or payload.get("pdf_path")
+        attach = str(raw_attach).strip() if raw_attach else None
+        iid = payload.get("id") or payload.get("incident_id")
+        incident_id = str(iid).strip() if iid else None
+        pid = payload.get("proposal_id")
+        if not pid and evento_tipo == "aprobacion_pendiente":
+            pid = payload.get("id")
+        proposal_id = str(pid).strip() if pid else None
+        return NotifMessage(
+            tipo=tipo,
+            severidad=sev_label,
+            titulo=subject[:200],
+            cuerpo=str(body_email)[:4000],
+            cuerpo_corto=corto,
+            link=link,
+            incident_id=incident_id,
+            proposal_id=proposal_id,
+            attachment_path=attach,
+        )
 
     async def _send(
         self,
         channels: list[str],
         recipient: Recipient,
-        subject: str,
-        body_email: str,
+        mensaje: NotifMessage,
     ) -> tuple[list[str], bool]:
         """
         Envía por canales elegidos; si uno falla, intenta el otro si estaba disponible.
-        WhatsApp usa texto genérico (sin IPs/CVE).
         """
         ok_any = False
         used: list[str] = []
-        wa_body = self._wa_safe_body(subject)
 
         async def try_email() -> bool:
             if not recipient.email:
                 return False
-            return send_email(recipient.email, subject, body_email)
+            return await self._email_ch.send(recipient, mensaje)
 
         async def try_wa() -> bool:
             if not recipient.whatsapp_number:
@@ -227,7 +320,7 @@ class NotificationEngine:
             if not await self._allow_whatsapp_hour():
                 logger.warning("Límite WhatsApp/hora alcanzado; omitiendo WA")
                 return False
-            return send_whatsapp_plain(recipient.whatsapp_number, wa_body)
+            return await self._wa_ch.send(recipient, mensaje)
 
         for ch in channels:
             if ch == "email":
@@ -317,18 +410,20 @@ class NotificationEngine:
         if sev == "critica" or evento_tipo == "honeypot_hit":
             body_email = (body_email or "")[:4000]
 
+        subj = str(subject)[:200]
+        body = str(body_email)
+        mensaje = self._build_notif_message(evento_tipo, sev, payload, subj, body)
+
+        area_from_payload = payload.get("area")
+        area_override = str(area_from_payload).strip() if area_from_payload else None
+
         any_ok = False
         for r in recipients:
-            channels = self._select_channels(sev, r, quiet)
+            channels = await self._select_channels(sev, r, quiet, area_override=area_override)
             if not channels:
                 await self._log(evento_tipo, r.id, [], True, {"skipped": "no_channels", "sev": sev})
                 continue
-            used, ok = await self._send(
-                channels,
-                r,
-                subject=str(subject)[:200],
-                body_email=str(body_email),
-            )
+            used, ok = await self._send(channels, r, mensaje)
             if ok:
                 any_ok = True
             await self._log(evento_tipo, r.id, used, ok, {"recipient": r.nombre})

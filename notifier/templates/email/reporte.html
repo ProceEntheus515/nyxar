@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ titulo }}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0d1117;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0d1117;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#161b22;border:1px solid #21262d;border-radius:8px;">
+          <tr>
+            <td style="padding:20px 24px;border-bottom:1px solid #21262d;">
+              <span style="color:#7b68ee;font-size:12px;text-transform:uppercase;">Reporte</span>
+              <h1 style="margin:8px 0 0;color:#e6edf3;font-size:18px;">{{ titulo }}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 24px;color:#e6edf3;font-size:14px;line-height:1.55;">
+              {{ cuerpo_html | safe }}
+            </td>
+          </tr>
+          {% if link %}
+          <tr>
+            <td style="padding:0 24px 24px;">
+              <a href="{{ link }}" style="color:#00d4ff;font-size:14px;">Abrir o descargar</a>
+            </td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td style="padding:16px 24px;border-top:1px solid #21262d;color:#6e7681;font-size:11px;">
+              Este email fue generado automáticamente por NYXAR.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

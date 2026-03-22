@@ -1,4 +1,4 @@
-﻿# 🧠 NYXAR — PROMPTS_V2.md
+# 🧠 NYXAR — PROMPTS_V2.md
 ## Módulos Avanzados — Segunda Entrega
 
 > **Prerequisito:** Tener el PROMPTS.md (v1) completamente implementado y con tests pasando.
@@ -28,7 +28,7 @@
 | V12 | Report Dev | Sistema de reportes — generador PDF automático | REPORTS |
 | V13 | Report Dev | Sistema de reportes — scheduler y plantillas | REPORTS |
 | V14 | Integration Dev | Notificaciones — motor central de alertas | NOTIFY |
-| V15 | Integration Dev | Notificaciones — conectores Slack, Email, WhatsApp | NOTIFY |
+| V15 | Integration Dev | Notificaciones — conectores Email y WhatsApp (sin Slack) | NOTIFY |
 | V16 | Integration Dev | Notificaciones — reglas y preferencias por usuario | NOTIFY |
 | V17 | DevOps Engineer | Observabilidad — métricas internas del sistema | OBS |
 | V18 | DevOps Engineer | Observabilidad — dashboard de salud del sistema | OBS |
@@ -103,9 +103,8 @@ nyxar/
 │   ├── engine.py            # evalúa qué notificar y a quién
 │   ├── channels/
 │   │   ├── __init__.py
-│   │   ├── slack.py
-│   │   ├── email.py         # SMTP async
-│   │   └── whatsapp.py      # via API de WhatsApp Business o Twilio
+│   │   ├── email.py         # SMTP async (aiosmtplib)
+│   │   └── whatsapp.py      # Meta Cloud API y/o gateway HTTP (httpx)
 │   ├── templates/           # plantillas Jinja2 por canal y tipo
 │   └── preferences.py       # reglas por usuario/área/severidad
 │
@@ -1982,7 +1981,7 @@ POST /reports/generate
 POST /reports/schedule
   - Configura el horario de generación automática
   - Body: {"diario_hora": "06:00", "semanal_dia": "lunes",
-           "notify_channels": ["slack", "email"]}
+           "notify_channels": ["email", "whatsapp"]}
 ```
 
 INTEGRACIÓN CON EL NOTIFIER:
@@ -2113,8 +2112,8 @@ class NotificationEngine:
         """
         Canales según severidad y preferencias del recipient:
         
-        critica: slack + whatsapp + email (siempre, incluso en silencio)
-        alta: slack + email (en silencio: solo email)
+        critica: whatsapp + email (siempre, incluso en silencio)
+        alta: whatsapp + email (en silencio: solo email)
         media: email
         baja: email (1 por día como resumen, no por evento individual)
         info: solo en el dashboard (no enviar notificaciones externas)
@@ -2127,7 +2126,6 @@ class Recipient(BaseModel):
     id: str
     nombre: str
     email: Optional[str]
-    slack_user_id: Optional[str]    # @usuario en Slack
     whatsapp_number: Optional[str]  # con código de país: +5491112345678
     area: Optional[str]
     es_admin: bool = False
@@ -2150,156 +2148,116 @@ NO HAGAS:
 ---
 
 ### PROMPT V15 — Integration Dev
-**Rol:** 🔔 Integration Developer  
+**Rol:** Integration Developer  
 **Componente:** Conectores de canales de notificación  
-**Entregable:** Los tres conectores en `notifier/channels/`
+**Entregable:** Dos conectores en `notifier/channels/` (**email** y **WhatsApp**). **Slack queda fuera de alcance** en NYXAR (no implementar `slack.py` ni variables `SLACK_*`).
 
 ```
-Sos un Integration Developer especializado en APIs de mensajería
-(Slack, WhatsApp Business API, SMTP).
+Sos un Integration Developer especializado en SMTP async y WhatsApp
+(Cloud API de Meta y/o gateway HTTP genérico).
 
-ARCHIVO 1: notifier/channels/slack.py
+**Alcance explícito:** solo email y WhatsApp. No Slack.
 
-```python
-class SlackChannel:
-    """
-    Envía notificaciones a Slack via Incoming Webhooks o Bot API.
-    
-    Configuración .env:
-    SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...   # para webhooks
-    SLACK_BOT_TOKEN=xoxb-...                                  # para Bot API
-    SLACK_DEFAULT_CHANNEL=#NYXAR-alerts
-    
-    Preferir Bot API (SLACK_BOT_TOKEN) si está disponible.
-    Fallback a Webhook si no.
-    """
-    
-    async def send(
-        self, 
-        recipient: Recipient,
-        mensaje: NotifMessage
-    ) -> bool:
-        """
-        Envía un mensaje formateado a Slack.
-        
-        Usar Block Kit de Slack para mensajes ricos:
-        - Header con color según severidad (danger=rojo, warning=amarillo, good=verde)
-        - Sección con el texto del mensaje
-        - Context con timestamp y fuente
-        - Botón "Ver en dashboard" con link directo al incidente
-        
-        Si recipient.slack_user_id está configurado: DM directo.
-        Si no: enviar al SLACK_DEFAULT_CHANNEL.
-        """
-    
-    def _build_blocks(self, mensaje: NotifMessage) -> list[dict]:
-        """
-        Construye el payload de Block Kit según el tipo y severidad.
-        
-        Para incidentes críticos incluir:
-        - Color rojo en attachment
-        - Campo "Acción requerida" con el texto de acción inmediata
-        - Botón "Aprobar respuesta" si hay proposal pendiente
-        
-        Para reportes:
-        - Botón de descarga del PDF
-        """
-```
+---
 
-ARCHIVO 2: notifier/channels/email.py
+ARCHIVO 1: notifier/channels/email.py
 
 ```python
 class EmailChannel:
     """
-    Envía notificaciones por email via SMTP async.
-    Usar aiosmtplib para async nativo.
-    
-    Configuración .env:
-    SMTP_HOST=smtp.gmail.com
-    SMTP_PORT=587
-    SMTP_USER=NYXAR@empresa.com
-    SMTP_PASSWORD=...
-    SMTP_USE_TLS=true
-    EMAIL_FROM=NYXAR <NYXAR@empresa.com>
+    Envía notificaciones por email via SMTP async (aiosmtplib).
+
+    Configuración .env (preferir prefijo NYXAR; aceptar alias SMTP_* del estándar común):
+    NOTIFY_SMTP_HOST=   # o SMTP_HOST
+    NOTIFY_SMTP_PORT=587
+    NOTIFY_SMTP_USER=
+    NOTIFY_SMTP_PASSWORD=
+    NOTIFY_SMTP_TLS=true
+    NOTIFY_SMTP_FROM=   # o EMAIL_FROM; remitente visible
+
+    Si el host SMTP está vacío: no enviar; registrar en log (modo desarrollo).
+
+    Links al dashboard: el motor arma `mensaje.link` usando NOTIFY_DASHBOARD_BASE_URL
+    (p. ej. /incidents/{id} o /approvals?proposal=...).
     """
-    
-    async def send(
-        self,
-        recipient: Recipient,
-        mensaje: NotifMessage
-    ) -> bool:
+
+    async def send(self, recipient: Recipient, mensaje: NotifMessage) -> bool:
         """
-        Envía email HTML formateado.
-        
-        El HTML del email debe:
-        - Funcionar en clientes de email corporativos (Outlook, Gmail)
+        Envía email HTML + texto plano (multipart).
+
+        El HTML debe:
+        - Funcionar en clientes corporativos (Outlook, Gmail)
         - Usar tablas HTML para layout (no flexbox/grid)
         - Incluir versión plain text como fallback
-        - Tener diseño consistente con el dashboard (colores oscuros)
-        - Incluir link "Ver en dashboard" con el incident_id en la URL
-        - Incluir footer: "Este email fue generado automáticamente por NYXAR"
-        
-        Para reportes: adjuntar el PDF como attachment.
-        Límite de adjuntos: 10MB.
+        - Estilo oscuro alineado al dashboard
+        - Botón/link "Ver en dashboard" cuando mensaje.link exista
+        - Footer: "Este email fue generado automáticamente por NYXAR"
+
+        Para reportes: adjuntar PDF si mensaje.attachment_path apunta a un archivo
+        existente y pesa menos de 10MB.
         """
-    
+
     def _build_html(self, mensaje: NotifMessage) -> str:
         """
-        Genera el HTML del email desde la plantilla Jinja2.
-        Templates en notifier/templates/email/
-        Una plantilla por tipo: alerta.html, reporte.html, aprobacion.html
+        Plantillas Jinja2 en notifier/templates/email/
+        Por tipo: alerta.html, reporte.html, aprobacion.html
+        (resolucion puede reutilizar alerta.html).
         """
 ```
 
-ARCHIVO 3: notifier/channels/whatsapp.py
+---
+
+ARCHIVO 2: notifier/channels/whatsapp.py
 
 ```python
 class WhatsAppChannel:
     """
-    Envía mensajes de WhatsApp para alertas urgentes.
-    
-    Soportar dos proveedores (configurar con WHATSAPP_PROVIDER en .env):
-    
-    A) Twilio (recomendado para empezar):
-       WHATSAPP_PROVIDER=twilio
-       TWILIO_ACCOUNT_SID=...
-       TWILIO_AUTH_TOKEN=...
-       TWILIO_WHATSAPP_FROM=whatsapp:+14155238886  # número de Twilio sandbox
-    
-    B) WhatsApp Business API (para producción, requiere aprobación de Meta):
-       WHATSAPP_PROVIDER=meta
-       META_WHATSAPP_TOKEN=...
-       META_WHATSAPP_PHONE_ID=...
+    WhatsApp para alertas urgentes. Async con httpx.AsyncClient.
+
+    Proveedor A — Meta Cloud API (producción típica):
+    WHATSAPP_CLOUD_ACCESS_TOKEN=
+    WHATSAPP_CLOUD_PHONE_NUMBER_ID=
+    WHATSAPP_CLOUD_API_VERSION=v21.0   # opcional
+
+    Proveedor B — Gateway HTTP genérico (integración propia / proxy):
+    NOTIFY_WHATSAPP_HTTP_URL=
+    NOTIFY_WHATSAPP_HTTP_BEARER=        # opcional
+    NOTIFY_WHATSAPP_HTTP_KEY_TO=to
+    NOTIFY_WHATSAPP_HTTP_KEY_MESSAGE=message
+
+    No Twilio en este alcance (si se necesita, sería otro ticket).
+
+    Rate limit: máximo 1 mensaje por minuto al mismo destino (Redis; clave por hash
+    del número, no loguear E.164 completo).
+    Constructor opcional: redis_client_getter para obtener el cliente Redis async.
     """
-    
-    async def send(
-        self,
-        recipient: Recipient,
-        mensaje: NotifMessage
-    ) -> bool:
+
+    async def send(self, recipient: Recipient, mensaje: NotifMessage) -> bool:
         """
-        Envía mensaje de WhatsApp.
-        
-        CRÍTICO: WhatsApp tiene restricciones de contenido.
-        Los mensajes deben ser:
-        - Cortos (máximo 200 caracteres para alertas)
-        - Sin HTML (solo texto plano)
-        - Sin IPs, CVEs ni términos técnicos
-        - Formato: "🚨 {severidad} | {descripcion_simple} | Ver: {url_corta}"
-        
-        Para Twilio: POST a https://api.twilio.com/2010-04-01/Accounts/{SID}/Messages.json
-        Para Meta: POST a https://graph.facebook.com/v18.0/{PHONE_ID}/messages
+        Texto plano únicamente. Sin adjuntos en modo básico.
+
+        Contenido:
+        - Máximo ~200 caracteres en la línea final enviada
+        - Sin HTML
+        - Sin IPs, CVEs ni datos técnicos en el cuerpo (sanitizar / truncar)
+        - Formato sugerido (sin emojis en logs ni en plantillas obligatorias):
+          "ALERTA {severidad} | {descripcion_simple} | Ver: {url_corta o 'dashboard'}"
+
+        Meta: POST https://graph.facebook.com/{version}/{PHONE_ID}/messages
+        Gateway: POST JSON al NOTIFY_WHATSAPP_HTTP_URL con las claves configurables.
         """
-    
-    def _truncate_for_whatsapp(self, texto: str) -> str:
+
+    @staticmethod
+    def _truncate_for_whatsapp(texto: str, max_len: int = 200) -> str:
         """
-        Simplifica y trunca el mensaje para WhatsApp.
-        Eliminar términos técnicos, IPs, puertos.
-        Máximo 200 caracteres.
+        Normaliza espacios, elimina patrones tipo IP/CVE/puerto, trunca a max_len.
         """
 ```
 
-MODELO NotifMessage:
+---
+
+MODELO NotifMessage (referencia; vive en notifier/models.py):
+
 ```python
 class NotifMessage(BaseModel):
     tipo: Literal["alerta", "reporte", "aprobacion", "resolucion"]
@@ -2317,11 +2275,12 @@ class NotifMessage(BaseModel):
 REGLAS:
 - Si el envío falla: reintentar 1 vez después de 5 segundos.
   Si falla de nuevo: loggear error y continuar (no bloquear otras notificaciones).
-- Loggear cada envío: canal, destinatario, tipo, latencia, éxito/fallo.
-- Los tokens y passwords de APIs van SIEMPRE desde variables de entorno.
+- Loggear cada envío: canal, tipo, latencia, éxito/fallo; en WhatsApp enmascarar destino (solo últimos dígitos o hash).
+- Credenciales y tokens solo desde variables de entorno.
 
 NO HAGAS:
-- No pongas el número de WhatsApp en logs (dato personal sensible).
+- No implementes Slack ni documentes SLACK_* en este prompt.
+- No pongas el número de WhatsApp completo en logs (dato personal sensible).
 - No envíes archivos adjuntos por WhatsApp (no soportado en modo básico).
 - No uses requests síncrono. Todo con httpx.AsyncClient o aiosmtplib.
 - No envíes más de 1 mensaje de WhatsApp por minuto al mismo número.
@@ -2330,147 +2289,103 @@ NO HAGAS:
 ---
 
 ### PROMPT V16 — Integration Dev
-**Rol:** 🔔 Integration Developer  
+**Rol:** Integration Developer  
 **Componente:** Preferencias y reglas de notificación  
-**Entregable:** `notifier/preferences.py` y endpoints de configuración
+**Entregable:** `notifier/preferences_manager.py`, `notifier/preferences.py` (carga .env) y `api/routers/notifications.py`
 
 ```
-Sos un Integration Developer especializado en sistemas de preferencias
-de usuario y configuración de notificaciones empresariales.
+Sos un Integration Developer especializado en preferencias de notificación
+(solo email y WhatsApp vía API Cloud de Meta; sin Slack).
 
-ARCHIVO: notifier/preferences.py
+ARCHIVO: notifier/preferences_manager.py — class PreferencesManager
 
-```python
-class PreferencesManager:
-    """
-    Gestiona las preferencias de notificación por usuario, área y sistema.
-    
-    Jerarquía de preferencias (de mayor a menor prioridad):
-    1. Preferencias del usuario individual
-    2. Preferencias del área
-    3. Configuración global (variables .env)
-    """
-    
-    DEFAULT_PREFERENCES = {
-        "critica": {
-            "canales": ["slack", "whatsapp", "email"],
-            "respetar_silencio": False,   # siempre enviar
-            "dedup_minutes": 0             # nunca deduplicar críticos
-        },
-        "alta": {
-            "canales": ["slack", "email"],
-            "respetar_silencio": True,
-            "dedup_minutes": 30
-        },
-        "media": {
-            "canales": ["email"],
-            "respetar_silencio": True,
-            "dedup_minutes": 60
-        },
-        "baja": {
-            "canales": ["email"],
-            "respetar_silencio": True,
-            "agrupar_en_resumen_diario": True  # no enviar individualmente
-        },
-        "info": {
-            "canales": [],  # solo dashboard
-            "respetar_silencio": True
-        }
-    }
-    
-    async def get_for_recipient(
-        self, 
-        recipient_id: str,
-        severidad: str
-    ) -> NotifPreferences:
-        """
-        Retorna las preferencias efectivas para un recipient y severidad.
-        Merge de preferencias individuales + área + default.
-        """
-    
-    async def set_user_preferences(
-        self,
-        user_id: str,
-        prefs: dict
-    ) -> None:
-        """Guarda preferencias de un usuario en MongoDB."""
-    
-    async def set_area_preferences(
-        self,
-        area: str,
-        prefs: dict
-    ) -> None:
-        """Preferencias para todo un área."""
-    
-    async def get_all_admins(self) -> list[Recipient]:
-        """
-        Retorna la lista de administradores del sistema.
-        Fuentes:
-        1. Variable NOTIFY_ADMINS en .env: "admin1@empresa.com,admin2@empresa.com"
-        2. Usuarios con is_admin=True en MongoDB (sincronizados desde AD)
-        """
-    
-    async def get_area_responsible(self, area: str) -> Optional[Recipient]:
-        """
-        Retorna el responsable del área.
-        Configurado via NOTIFY_AREA_{AREA}_EMAIL en .env, o via AD (manager del área).
-        """
-```
+Jerarquía efectiva (merge):
+1. Defaults de código (flags por severidad)
+2. Documento Mongo scope=global, key=default (opcional)
+3. Documento Mongo scope=area, key={area} (opcional)
+4. Documento Mongo scope=user, key={user_id} (opcional)
 
-NUEVOS ENDPOINTS:
-```python
-# api/routers/notifications.py
+Además NOTIFY_CHANNELS_ENABLED recorta canales a nivel sistema.
 
-GET /notifications/preferences
-  - Preferencias actuales del sistema (globales)
+Persistencia: colección MongoDB `notif_preferences`, documentos con
+`severities`: por cada severidad (critica, alta, media, baja, info) solo
+`email_enabled` y `whatsapp_enabled` (sin PII).
 
-PUT /notifications/preferences/user/{user_id}
-  - Actualiza preferencias de un usuario
-  - Body: {"alta": {"canales": ["email"]}, "critica": {"whatsapp": "+54911..."}}
+Caché Redis: TTL 5 minutos, valores solo flags efectivos por destino/severidad;
+invalidación con clave de generación `notif:prefs:gen` (INCR al escribir).
 
-PUT /notifications/preferences/area/{area}
-  - Actualiza preferencias de un área
+DEFAULT_POLICY (referencia de producto, expuesta en API): mismas severidades
+que antes con canales ["whatsapp","email"] o ["email"].
 
-GET /notifications/log
-  - Historial de notificaciones enviadas (paginado)
-  - Filtrable por canal, tipo, estado
+Integración motor: `NotificationEngine` en `notifier/engine.py` llama a
+`PreferencesManager.get_for_recipient(recipient.id, severidad, area=...)`
+para decidir email/WhatsApp por severidad; `area` puede venir del payload
+del incidente (`payload["area"]`) o de `Recipient.area`. Si Mongo/Redis
+fallan al iniciar el manager, se usa `Recipient.preferencias` (cargada
+desde .env en `load_recipients_from_env`).
 
-POST /notifications/test
-  - Body: {"canal": "slack", "severidad": "alta"}
-  - Envía una notificación de prueba al canal configurado
-  - Útil para verificar que la configuración funciona
+Métodos principales:
+- get_for_recipient(recipient_id, severidad, area=None) -> NotifPreferences
+- set_user_preferences / set_area_preferences / set_global_preferences
+- get_global_document, get_user_document
 
-GET /notifications/stats
-  - Estadísticas: enviadas hoy, tasa de éxito por canal, más frecuentes
-```
+Helpers en el mismo módulo:
+- get_all_admins_from_env() -> lista Recipient desde NOTIFY_*_EMAILS/WHATSAPP
+- get_area_responsible_from_env(area) -> NOTIFY_AREA_{AREA}_EMAIL
 
-VARIABLE DE ENTORNO PARA CONFIGURACIÓN RÁPIDA:
-```
-# Admins del sistema (reciben todas las alertas críticas)
-NOTIFY_ADMINS=admin@empresa.com,seguridad@empresa.com
+Regla de negocio: usuarios considerados admin (emails en NOTIFY_ADMIN_EMAILS
+o ids en NOTIFY_PREFERENCE_ADMIN_IDS) no pueden quedar con critica sin ningún
+canal (email y whatsapp ambos false). La política global tampoco puede dejar
+critica sin canales.
 
-# Responsables por área (para alertas del área)
-NOTIFY_AREA_CONTABILIDAD=contabilidad@empresa.com
-NOTIFY_AREA_RRHH=rrhh@empresa.com
-NOTIFY_AREA_IT=it@empresa.com
+---
 
-# Receptores de reportes automáticos
-NOTIFY_REPORT_RECIPIENTS=gerencia@empresa.com,ceo@empresa.com
+ARCHIVO: api/routers/notifications.py (prefijo bajo la app: /api/v1)
 
-# Canales habilitados (deshabilitar canales no configurados)
-NOTIFY_CHANNELS_ENABLED=slack,email   # whatsapp opcional
-```
+GET  /notifications/preferences
+PUT  /notifications/preferences   (body global; requiere API key si aplica)
+PUT  /notifications/preferences/user/{user_id}
+PUT  /notifications/preferences/area/{area}
+GET  /notifications/preferences/user/{user_id}
+GET  /notifications/preferences/effective/{user_id}?severidad=&area=
+GET  /notifications/log?limit=&offset=&evento_tipo=&ok=&canal=
+GET  /notifications/stats
+POST /notifications/test   body: {"canal":"email"|"whatsapp","severidad":"alta"}
+GET  /notifications/admins
+GET  /notifications/area/{area}/responsible
+
+Body JSON de preferencias (ejemplo; no incluir números ni emails en el body):
+{
+  "alta": {"email_enabled": true, "whatsapp_enabled": false},
+  "critica": {"email_enabled": true, "whatsapp_enabled": true}
+}
+
+Seguridad: si NOTIFY_API_KEY está definida en .env, los PUT y POST /test
+exigen header X-Notify-Api-Key con ese valor.
+
+POST /test usa solo NOTIFY_TEST_EMAIL o NOTIFY_TEST_WHATSAPP (E.164), nunca
+los destinatarios de producción.
+
+---
+
+VARIABLES .env (alineadas con el proyecto; ver .env.example):
+
+NOTIFY_ADMIN_EMAILS, NOTIFY_ADMIN_WHATSAPP, NOTIFY_SECURITY_*, NOTIFY_REPORT_*
+NOTIFY_CHANNELS_ENABLED=email,whatsapp
+NOTIFY_API_KEY=   (opcional, protege mutaciones)
+NOTIFY_TEST_EMAIL=, NOTIFY_TEST_WHATSAPP=
+NOTIFY_PREFERENCE_ADMIN_IDS=   (CSV de ids para regla critica admin)
+NOTIFY_AREA_{AREA}_EMAIL=   (ej. NOTIFY_AREA_CONTABILIDAD_EMAIL)
 
 REGLAS:
-- Las preferencias se cachean en Redis por 5 minutos (se actualizan poco).
-- Un usuario puede optar por no recibir notificaciones de baja severidad.
-  No puede optar por no recibir críticos (es política de seguridad).
-- Las preferencias se guardan en MongoDB, colección notif_preferences.
+- No guardar teléfonos ni emails en Redis; solo flags o claves de invalidación.
+- Preferencias por usuario/área en Mongo, colección notif_preferences.
+- Un área solo modifica su propio path /preferences/area/{area}.
 
 NO HAGAS:
-- No guardes números de teléfono ni emails en Redis (solo IDs, los datos en MongoDB).
-- No permitas deshabilitar notificaciones de severidad crítica para admins.
-- No hagas que un área pueda modificar preferencias de otras áreas.
+- No mezclar E.164 ni emails dentro de arrays "canales" en el JSON de preferencias.
+- No permitir que la política global desactive todos los canales en critica.
+- No permitir que admins (según env) queden sin canal en critica.
 ```
 
 ---
@@ -2871,14 +2786,14 @@ TEST_HUNTING.PY:
 - test_hunter_timeout: query que tarda más de MAX_QUERY_DURATION_SECONDS → lista vacía
 - test_hunt_completo: hipótesis → queries → resultados → conclusión (flujo end-to-end mock)
 
-TEST_NOTIFIER.PY (con mocks de Slack/Email/WhatsApp):
-- test_slack_envia_critico: incidente critico → Slack webhook llamado
+TEST_NOTIFIER.PY (con mocks de Email/WhatsApp):
+- test_whatsapp_envia_critico: incidente critico → WhatsAppChannel.send llamado (mock)
 - test_email_envia_con_html: notificación → email HTML enviado via SMTP mock
 - test_whatsapp_trunca_mensaje: mensaje largo → truncado a 200 chars
 - test_dedup_previene_repeticion: mismo evento dos veces en 15 min → solo 1 envío
 - test_quiet_hours_bloquea_medio: hora 2am, severidad media → no envía
 - test_quiet_hours_no_bloquea_critico: hora 2am, severidad critica → sí envía
-- test_canal_falla_intenta_siguiente: Slack falla → intenta email
+- test_canal_falla_intenta_siguiente: WhatsApp falla → intenta email (o viceversa)
 - test_honeypot_siempre_envía: honeypot hit, hora 3am → envía sin importar nada
 
 TEST_OBSERVABILITY.PY:
@@ -2891,7 +2806,7 @@ TEST_OBSERVABILITY.PY:
 - test_health_endpoint_rapido: GET /health → responde en menos de 200ms
 
 REGLAS ADICIONALES PARA TESTS V2:
-- Los mocks de APIs externas (MISP, Slack, etc.) usan httpx.MockTransport.
+- Los mocks de APIs externas (MISP, Graph API de WhatsApp, etc.) usan httpx.MockTransport.
 - Los tests de AD usan ldap3 con MockStrategy para simular el servidor.
 - Todos los tests de playbooks verifican que el audit_log fue creado.
 - Los tests de notificaciones verifican deduplicación con Redis real (integration marker).
@@ -2900,7 +2815,7 @@ REGLAS ADICIONALES PARA TESTS V2:
 NO HAGAS:
 - No hagas tests que dependan de APIs externas reales.
   Todo mockeado o con servidores locales de test.
-- No testees la lógica interna de Slack/WhatsApp/SMTP. Eso es su responsabilidad.
+- No testees la lógica interna profunda de WhatsApp/SMTP. Eso es responsabilidad del conector.
   Solo verificar que el mensaje fue enviado con el contenido correcto.
 - No hagas tests que tarden más de 5 segundos individualmente.
 - No uses time.sleep() en tests async. Solo asyncio.sleep() si es estrictamente necesario.

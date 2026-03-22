@@ -8,6 +8,7 @@ from . import response
 from . import response_proposals
 from . import identity
 from . import hunting
+from . import notifications
 
 __all__ = [
     "events",
@@ -20,4 +21,5 @@ __all__ = [
     "response_proposals",
     "identity",
     "hunting",
+    "notifications",
 ]

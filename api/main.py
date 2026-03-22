@@ -12,7 +12,7 @@ from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
 
 # Routers
-from api.routers import events, identities, incidents, alerts, simulator, ai, response, response_proposals, hunting
+from api.routers import events, identities, incidents, alerts, simulator, ai, response, response_proposals, hunting, notifications
 from api.routers.identity import router as identity_router, ensure_nyxar_start_time
 from api.routers.response import ensure_response_audit_indexes
 from api.routers.hunting import ensure_hunting_indexes
@@ -108,6 +108,7 @@ app.include_router(ai.router, prefix="/api/v1")
 app.include_router(response.router, prefix="/api/v1")
 app.include_router(response_proposals.router, prefix="/api/v1")
 app.include_router(hunting.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
 
 if os.getenv("LAB_MODE", "false").lower() == "true":
     app.include_router(simulator.router, prefix="/api/v1")

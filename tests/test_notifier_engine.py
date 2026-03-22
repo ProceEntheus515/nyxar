@@ -6,6 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from notifier.channels.email import EmailChannel
+from notifier.channels.whatsapp import WhatsAppChannel
 from notifier.engine import NotificationEngine, _norm_sev
 from notifier.models import NotifPreferences, Recipient
 
@@ -26,7 +28,7 @@ async def test_select_channels_critica_whatsapp_y_email():
         whatsapp_number="+5491100000000",
         preferencias=NotifPreferences(email_enabled=True, whatsapp_enabled=True),
     )
-    ch = eng._select_channels("critica", r, es_horario_silencio=True)
+    ch = await eng._select_channels("critica", r, es_horario_silencio=True)
     assert "email" in ch and "whatsapp" in ch
 
 
@@ -40,8 +42,27 @@ async def test_select_channels_alta_silencio_solo_email():
         whatsapp_number="+5491100000000",
         preferencias=NotifPreferences(email_enabled=True, whatsapp_enabled=True),
     )
-    ch = eng._select_channels("alta", r, es_horario_silencio=True)
+    ch = await eng._select_channels("alta", r, es_horario_silencio=True)
     assert ch == ["email"]
+
+
+@pytest.mark.asyncio
+async def test_select_channels_usa_prefs_efectivas_cuando_manager_mockea():
+    eng = NotificationEngine()
+    r = Recipient(
+        id="1",
+        nombre="a",
+        email="a@x.com",
+        preferencias=NotifPreferences(email_enabled=True, whatsapp_enabled=True),
+    )
+    with patch.object(
+        NotificationEngine,
+        "_effective_prefs_for_recipient",
+        new_callable=AsyncMock,
+        return_value=NotifPreferences(email_enabled=False, whatsapp_enabled=False),
+    ):
+        ch = await eng._select_channels("media", r, es_horario_silencio=False)
+    assert ch == []
 
 
 @pytest.mark.asyncio
@@ -86,7 +107,7 @@ async def test_honeypot_sin_dedup(monkeypatch):
     eng.redis_bus.client.expire = AsyncMock(return_value=True)
     eng.redis_bus.client.set = AsyncMock(return_value=True)
 
-    with patch("notifier.engine.send_email", return_value=True):
-        with patch("notifier.engine.send_whatsapp_plain", return_value=True):
+    with patch.object(EmailChannel, "send", new_callable=AsyncMock, return_value=True):
+        with patch.object(WhatsAppChannel, "send", new_callable=AsyncMock, return_value=True):
             await eng.process_event("honeypot_hit", {"id": "hp1", "descripcion": "x"})
     eng.redis_bus.client.exists.assert_not_called()

@@ -18,6 +18,10 @@ watchdog
 httpx
 schedule
 
+# --- notifier ---
+aiosmtplib
+jinja2
+
 # --- ai_analyst ---
 anthropic
 
