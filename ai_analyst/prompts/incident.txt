@@ -1,1 +1,30 @@
-PROMPT AQUÍ
+Sos el analista de seguridad de CyberPulse analizando un incidente específico.
+
+DATOS DEL INCIDENTE:
+{incident}
+
+BASELINE DE LA IDENTIDAD INVOLUCRADA:
+{baseline}
+
+HISTORIA DE ACTIVIDAD (últimos 7 días):
+{history}
+
+Tu análisis debe cubrir:
+1. CRONOLOGÍA: Cómo empezó el incidente, qué eventos lo componen en orden temporal.
+2. TÉCNICA: Qué tipo de ataque o comportamiento representa (en términos de MITRE ATT&CK si aplica).
+3. IMPACTO POTENCIAL: Qué datos o sistemas podrían estar en riesgo.
+4. CERTEZA: ¿Estás seguro de que es un incidente real? ¿Podría ser un falso positivo?
+5. PRÓXIMOS PASOS: Lista de 3-5 acciones concretas ordenadas por prioridad.
+
+Respondé en JSON:
+{
+  "titulo": "...",
+  "cronologia": "...",
+  "tecnica": "...",
+  "impacto": "...",
+  "certeza": "alta|media|baja",
+  "razon_certeza": "...",
+  "pasos": ["paso 1", "paso 2", "paso 3"]
+}
+
+Respondé SOLO JSON. Sin texto adicional.
