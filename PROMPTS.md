@@ -1519,7 +1519,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 13 — Security Dev
-**Rol:** 🔐 Security Engineer  
+**Rol:** Security Engineer  
 **Componente:** Correlator — baseline.py (UEBA)  
 **Entregable:** correlator/baseline.py completamente funcional
 
@@ -1626,7 +1626,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 14 — Security Dev
-**Rol:** 🔐 Security Engineer  
+**Rol:** Security Engineer  
 **Componente:** Correlator — todos los patrones de ataque  
 **Entregable:** Los 5 archivos de patterns/
 
@@ -1757,7 +1757,7 @@ NO HAGAS:
 ---
 
 ### PROMPT 15 — Security Dev
-**Rol:** 🔐 Security Engineer  
+**Rol:** Security Engineer  
 **Componente:** risk_score.py y honeypot.py  
 **Entregable:** Los dos archivos de soporte del correlator
 
