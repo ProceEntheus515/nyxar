@@ -1,0 +1,22 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 42rem;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--base-soft);
+}
+
+.desc {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--base-muted);
+}

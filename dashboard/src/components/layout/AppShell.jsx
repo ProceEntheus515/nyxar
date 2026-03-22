@@ -12,9 +12,9 @@ const TAB_TITLES = {
   timeline: 'NYXAR — Timeline',
   identities: 'NYXAR — Identidades',
   hunting: 'NYXAR — Hunting',
-  response: 'NYXAR — Respuestas',
+  responses: 'NYXAR — Respuestas',
   reports: 'NYXAR — Reportes',
-  ceo: 'NYXAR — Vista Ejecutiva',
+  ceo: 'NYXAR — CEO View',
   health: 'NYXAR — Sistema',
 }
 
@@ -75,7 +75,7 @@ export default function AppShell() {
 
         <div className={styles.gridBody}>
           <div className={styles.nav}>
-            <Sidebar healthCritical={healthGeneral === 'critico'} isNarrowViewport={isNarrowViewport} />
+            <Sidebar isNarrowViewport={isNarrowViewport} />
           </div>
 
           <main className={styles.main}>

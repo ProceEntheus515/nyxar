@@ -13,6 +13,7 @@ const Identities = React.lazy(() => import('./views/Identities'))
 const HuntingView = React.lazy(() => import('./views/HuntingView'))
 const AttackInjector = React.lazy(() => import('./views/AttackInjector'))
 const SystemHealth = React.lazy(() => import('./views/SystemHealth'))
+const RoutePlaceholder = React.lazy(() => import('./views/RoutePlaceholder'))
 
 function LoadingView() {
   return (
@@ -49,6 +50,33 @@ function AppRoutes() {
             <Route path="identities" element={<Identities />} />
             <Route path="hunting" element={<HuntingViewRoute />} />
             <Route path="health" element={<SystemHealth />} />
+            <Route
+              path="responses"
+              element={
+                <RoutePlaceholder
+                  title="Respuestas"
+                  description="Propuestas de respuesta y playbooks automatizados. Pantalla en construcción."
+                />
+              }
+            />
+            <Route
+              path="reports"
+              element={
+                <RoutePlaceholder
+                  title="Reportes"
+                  description="Informes exportables y programados. Pantalla en construcción."
+                />
+              }
+            />
+            <Route
+              path="ceo"
+              element={
+                <RoutePlaceholder
+                  title="CEO View"
+                  description="Vista ejecutiva de riesgo y tendencias. Pantalla en construcción."
+                />
+              }
+            />
           </Route>
         </Routes>
       </Suspense>

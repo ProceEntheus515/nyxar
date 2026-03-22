@@ -29,8 +29,13 @@ export const useStore = create((set) => ({
   /** Si se setea, Timeline intenta hacer scroll a ese evento y luego se limpia. */
   timelineFocusEventId: null,
   sidebarCollapsed: readSidebarCollapsed(),
+  /** Propuestas de respuesta pendientes (badge en sidebar; WebSocket en futuras iteraciones). */
+  responseProposalsPending: 0,
 
   setTimelineFocusEventId: (id) => set({ timelineFocusEventId: id || null }),
+
+  setResponseProposalsPending: (n) =>
+    set({ responseProposalsPending: Math.max(0, Number(n) || 0) }),
 
   setWsConnected: (connected) =>
     set((state) => ({

@@ -1,0 +1,19 @@
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+}
+
+.dotNominal {
+  background: var(--clean-base);
+}
+
+.dotWarning {
+  background: var(--high-bright);
+}
+
+.dotCritical {
+  background: var(--critical-bright);
+}
