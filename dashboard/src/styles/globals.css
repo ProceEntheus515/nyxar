@@ -98,16 +98,7 @@ body {
   animation: fadeIn 0.3s ease-in forwards;
 }
 
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.animate-slide-in-right {
-  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes shimmer {
+@keyframes shimmerSweep {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
@@ -132,16 +123,5 @@ body {
     color-mix(in srgb, var(--base-bright) 8%, transparent) 50%,
     color-mix(in srgb, var(--base-bright) 0%, transparent) 100%
   );
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  animation: shimmerSweep 1.5s infinite;
 }

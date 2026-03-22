@@ -1,0 +1,131 @@
+/* ═══════════════════════════════════════════════════════════
+   NYXAR — MOTION (tokens: duration, ease en tokens.css)
+   Animaciones orientan, jerarquizan o responden; no decoran.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── ENTRADA DE ELEMENTOS ───────────────────────────────────
+   fadeUp: elemento nuevo en feed (evento, alerta) */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* slideInRight: panel lateral (detalle de identidad, etc.) */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ─── INDICADORES DE ESTADO ──────────────────────────────────
+   livePulse: conectado y recibiendo datos (no es spinner de espera) */
+@keyframes livePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--cyan-base) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--cyan-base) 0%, transparent);
+  }
+}
+
+/* criticalPulse: honeypot / alerta crítica */
+@keyframes criticalPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--critical-bright) 50%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--critical-bright) 0%, transparent);
+  }
+}
+
+/* ─── TRANSICIÓN DE DATOS ─────────────────────────────────────
+   dataFlip: número que cambia en tiempo real (rotateX sutil).
+   Contenedor con perspective mejora el efecto 3D. */
+@keyframes dataFlip {
+  0% {
+    transform: rotateX(-30deg);
+    opacity: 0.3;
+  }
+  100% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
+
+/* ─── LOADING ────────────────────────────────────────────────
+   shimmer: skeleton por desplazamiento de fondo */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ─── CLASES DE UTILIDAD ───────────────────────────────────── */
+
+.animate-fadeUp {
+  animation: fadeUp var(--duration-normal) var(--ease-out) both;
+}
+
+.animate-slideInRight {
+  animation: slideInRight var(--duration-normal) var(--ease-out) both;
+}
+
+.animate-live {
+  animation: livePulse 2.5s ease-in-out infinite;
+}
+
+.animate-critical {
+  animation: criticalPulse 1.5s ease-in-out infinite;
+}
+
+.animate-dataFlip {
+  animation: dataFlip var(--duration-fast) var(--ease-out) both;
+  transform-style: preserve-3d;
+}
+
+/* Skeleton opcional: gradiente + shimmer (sin duplicar el ::after de globals) */
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--base-border) 0%,
+    color-mix(in srgb, var(--base-bright) 12%, var(--base-border)) 50%,
+    var(--base-border) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Stagger para listas */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+
+/* Alias kebab-case usado en vistas existentes */
+.animate-slide-in-right {
+  animation: slideInRight var(--duration-normal) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
