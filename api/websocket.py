@@ -158,7 +158,12 @@ async def redis_listener():
     if not r: return
     
     pubsub = r.pubsub()
-    channels = ["dashboard:events", "channel:ai_updates", "alerts"] # Multi-canales legados para compatibilidad
+    channels = [
+        "dashboard:events",
+        "channel:ai_updates",
+        "alerts",
+        "notifications:urgent",
+    ]
     await pubsub.subscribe(*channels)
     
     logger.info(f"[WS] Escuchando canales Redis: {channels}")
@@ -166,8 +171,10 @@ async def redis_listener():
     async for msg in pubsub.listen():
         if msg['type'] == 'message':
             try:
-                data = json.loads(msg['data'].decode())
-                chan = msg['channel'].decode()
+                raw = msg["data"]
+                data = json.loads(raw.decode() if isinstance(raw, bytes) else raw)
+                ch = msg["channel"]
+                chan = ch.decode() if isinstance(ch, bytes) else ch
                 
                 if chan == "dashboard:events":
                     evt_type = data.get("type")
@@ -186,8 +193,8 @@ async def redis_listener():
                 elif chan == "channel:ai_updates":
                     await sio.emit("ai_memo", data)
                     
-                elif chan == "alerts":
-                    # Mappeo legado de RedisBus publish_alert
+                elif chan in ("alerts", "notifications:urgent"):
+                    # Mappeo legado de RedisBus publish_alert + canal urgente SOAR
                     if "honeypot_name" in data or data.get("patron") == "TRAMPILLA_HONEYPOT":
                         await sio.emit("honeypot_hit", data)
                     else:

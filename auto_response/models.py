@@ -2,9 +2,23 @@
 
 from __future__ import annotations
 
-from typing import Literal, List
+from datetime import datetime, timezone
+from typing import Any, Dict, Literal, List
 
 from pydantic import BaseModel, Field
+
+
+class PlaybookResult(BaseModel):
+    """Resultado estandarizado de un playbook (PROMPTS_V2)."""
+
+    execution_id: str = ""
+    playbook: str = ""
+    objetivo: str = ""
+    exitoso: bool = False
+    mensaje: str = ""
+    detalles: Dict[str, Any] = Field(default_factory=dict)
+    ejecutado_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    puede_deshacer: bool = False
 
 
 class AccionPropuesta(BaseModel):

@@ -188,6 +188,34 @@ class RedisBus:
             return await self.client.scard(f"blocklist:{lista}")
         return await self._retry_operation(op)
 
+    async def blocklist_remove(self, lista: str, *valores: str) -> None:
+        if not valores:
+            return
+
+        async def op():
+            await self.client.srem(f"blocklist:{lista}", *valores)
+
+        await self._retry_operation(op)
+
+    async def try_acquire_rate_slot(self, resource_key: str, ttl_s: int = 1) -> bool:
+        """
+        True si se adquirio el slot (primera ejecucion en la ventana).
+        False si la clave ya existia (rate limit).
+        Sin cliente Redis: permite pasar (degradacion suave).
+        """
+        if not self.client:
+            return True
+
+        async def op():
+            ok = await self.client.set(resource_key, "1", ex=ttl_s, nx=True)
+            return bool(ok)
+
+        try:
+            return await self._retry_operation(op)
+        except Exception as e:
+            logger.warning("try_acquire_rate_slot fallo, se permite ejecucion: %s", e)
+            return True
+
     # --- PUB/SUB ---
 
     async def publish_alert(self, canal: str, data: dict) -> None:

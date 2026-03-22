@@ -15,10 +15,12 @@ from ldap3 import (
     ALL,
     AUTO_BIND_NO_TLS,
     AUTO_BIND_TLS_BEFORE_BIND,
+    MODIFY_REPLACE,
     SUBTREE,
     Connection,
     Server,
 )
+from ldap3.utils.conv import escape_filter_chars
 
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
@@ -303,6 +305,46 @@ class ADClient:
                 logger.error("Error leyendo identities para logon fallback: %s", e)
 
         return out
+
+    def _get_user_by_sam_sync(self, sam: str) -> Optional[Dict[str, Any]]:
+        """Busca usuario por sAMAccountName (incluye deshabilitados)."""
+        esc = escape_filter_chars((sam or "").strip())
+        if not esc:
+            return None
+        filt = (
+            "(&(objectClass=user)(objectCategory=person)(sAMAccountName=%s))" % esc
+        )
+        attrs = list(self.USER_ATTRIBUTES) + ["userAccountControl"]
+        rows = self._search_entries_sync(filt, attrs)
+        if not rows:
+            return None
+        return rows[0]
+
+    def _set_user_account_control_sync(self, dn: str, uac: int) -> tuple[bool, str]:
+        if not dn:
+            return False, "dn_vacio"
+        if not self._ensure_bound_sync():
+            return False, "bind_failed"
+        assert self._conn is not None
+        ok = self._conn.modify(
+            str(dn),
+            {"userAccountControl": [(MODIFY_REPLACE, [str(int(uac))])]},
+        )
+        if not ok:
+            return False, str(self._conn.result)
+        return True, ""
+
+    async def get_user_by_sam(self, sam: str) -> Optional[Dict[str, Any]]:
+        def _run() -> Optional[Dict[str, Any]]:
+            return self._get_user_by_sam_sync(sam)
+
+        return await asyncio.to_thread(_run)
+
+    async def set_user_account_control(self, dn: str, uac: int) -> tuple[bool, str]:
+        def _run() -> tuple[bool, str]:
+            return self._set_user_account_control_sync(dn, uac)
+
+        return await asyncio.to_thread(_run)
 
     def close(self) -> None:
         self._close_sync()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import uuid
 from datetime import datetime, timezone
@@ -43,9 +44,9 @@ class ResponseEngine:
         self.mongo = mongo or MongoClient()
         self.redis_bus = redis_bus or RedisBus()
         self._notify = NotifyPlaybook(self.redis_bus)
-        self._block = BlockIPPlaybook()
-        self._quarantine = QuarantinePlaybook()
-        self._disable = DisableUserPlaybook()
+        self._block = BlockIPPlaybook(self.mongo, self.redis_bus)
+        self._quarantine = QuarantinePlaybook(self.mongo, self.redis_bus)
+        self._disable = DisableUserPlaybook(self.mongo, self.redis_bus)
         self._running = False
 
     def _pb_for(self, tipo: str):
@@ -58,6 +59,12 @@ class ResponseEngine:
         if tipo == "disable_user":
             return self._disable
         return self._notify
+
+    @staticmethod
+    def _rate_limit_key(tipo: str, objetivo: str) -> str:
+        raw = f"{tipo}:{(objetivo or '').strip()}"
+        h = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+        return f"auto_response:rl:{tipo}:{h}"
 
     async def _ensure_indexes(self) -> None:
         db = self.mongo.db
@@ -174,8 +181,13 @@ class ResponseEngine:
             return {"exito": False, "detalle": f"Plan invalido: {e}", "code": "BAD_PLAN"}
 
         incident_id = plan.incident_id
+        ejecutado_by = str(prev.get("aprobado_by") or "auto")
         resultados: List[Dict[str, Any]] = []
-        ctx: Dict[str, Any] = {"incident_id": incident_id, "proposal_id": proposal_id}
+        ctx: Dict[str, Any] = {
+            "incident_id": incident_id,
+            "proposal_id": proposal_id,
+            "ejecutado_by": ejecutado_by,
+        }
 
         audit = db[COL_AUDIT]
         try:
@@ -183,19 +195,34 @@ class ResponseEngine:
                 if i > 0:
                     await asyncio.sleep(1)
                 pb = self._pb_for(accion.tipo)
-                try:
-                    exec_out = await pb.execute(accion, ctx)
-                except Exception as e:
+                rl_key = self._rate_limit_key(accion.tipo, accion.objetivo)
+                if rl_key and not await self.redis_bus.try_acquire_rate_slot(
+                    rl_key, ttl_s=1
+                ):
                     exec_out = {
                         "exito": False,
-                        "detalle": str(e),
-                        "payload_redactado": {},
+                        "detalle": "Rate limit: maximo 1 playbook por segundo por objetivo.",
+                        "payload_redactado": {
+                            "tipo": accion.tipo,
+                            "objetivo": accion.objetivo,
+                        },
                     }
+                else:
+                    try:
+                        exec_out = await pb.execute(accion, ctx)
+                    except Exception as e:
+                        exec_out = {
+                            "exito": False,
+                            "detalle": str(e),
+                            "payload_redactado": {},
+                        }
                 entry = {
                     "tipo": accion.tipo,
                     "objetivo": accion.objetivo,
                     "exito": exec_out.get("exito", False),
                     "detalle": exec_out.get("detalle", ""),
+                    "execution_id": exec_out.get("execution_id"),
+                    "puede_deshacer": exec_out.get("puede_deshacer"),
                 }
                 resultados.append(entry)
                 audit_doc = {
@@ -206,6 +233,8 @@ class ResponseEngine:
                     "objetivo": accion.objetivo,
                     "exito": entry["exito"],
                     "detalle": entry["detalle"],
+                    "execution_id": entry.get("execution_id"),
+                    "puede_deshacer": entry.get("puede_deshacer"),
                     "payload_redactado": exec_out.get("payload_redactado") or {},
                 }
                 await audit.insert_one(audit_doc)

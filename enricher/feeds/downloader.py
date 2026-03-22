@@ -195,6 +195,8 @@ class FeedDownloader:
         # Revisión SET directo puro O(1)
         if await r.sismember("blocklist:feodo", ip): return "feodo_ip"
         if await r.sismember("blocklist:threatfox", ip): return "threatfox_iocs"
+        if await r.sismember("blocklist:nyxar_external", ip):
+            return "nyxar_external"
         
         # Revisión CIDR O(N) cacheado
         for cidr_list in [self.FEEDS["spamhaus_drop"]["redis_key"], self.FEEDS["spamhaus_edrop"]["redis_key"]]:
