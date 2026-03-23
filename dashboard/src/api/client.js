@@ -54,6 +54,17 @@ export const huntingApi = {
   },
 }
 
+export const ceoApi = {
+  /**
+   * Genera un nuevo informe ejecutivo (POST /api/v1/ai/ceo-view).
+   * Respuesta envuelta: { data: { titulo, resumen, acciones } }.
+   */
+  requestCeoView: async () => {
+    const response = await fetch('/api/v1/ai/ceo-view', { method: 'POST' })
+    return jsonOrThrow(response)
+  },
+}
+
 export const identityApi = {
   /**
    * Identidad completa del sistema (GET /api/v1/identity).

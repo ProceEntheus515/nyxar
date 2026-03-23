@@ -213,6 +213,85 @@ function buildMockHealthThroughput(points = 36) {
 }
 
 /**
+ * Historial demo para la vista CEO (sin backend). Copy deliberadamente no técnico.
+ */
+function buildMockCeoAnalyses() {
+  const now = Date.now()
+  return [
+    {
+      id: 'CEO-MOCK-REC',
+      tipo: 'ceo',
+      created_at: new Date(now - 8 * 60 * 1000).toISOString(),
+      semaforo: 'verde',
+      headline: 'La red opera con normalidad',
+      subline: 'No hay incidentes críticos activos.',
+      paragraphs: [
+        'Durante las últimas horas el entorno mostró el comportamiento esperado para un día laborable. Los equipos accedieron a los sistemas habituales y no aparecieron patrones que sugieran compromiso.',
+        'El equipo de seguridad mantuvo la vigilancia estándar y las alertas automáticas se mantuvieron en niveles bajos, acordes al historial reciente.',
+        'No se requiere una reunión extraordinaria; el informe semanal puede incluir este periodo como estable.',
+      ],
+      accion_inmediata: undefined,
+    },
+    {
+      id: 'CEO-MOCK-02',
+      tipo: 'ceo',
+      created_at: new Date(now - 26 * 3600 * 1000).toISOString(),
+      semaforo: 'naranja',
+      headline: 'Hay señales que conviene revisar',
+      subline: 'Un equipo del área de Ventas mostró actividad fuera del horario habitual.',
+      paragraphs: [
+        'Detectamos un uso más intenso de ciertas aplicaciones en horario nocturno, concentrado en pocas cuentas. Puede tratarse de trabajo legítimo o de un proceso automatizado mal configurado.',
+        'Por ahora no hay indicios de daño, pero el patrón merece una conversación breve con el responsable del área para descartar cuentas compartidas o dispositivos prestados.',
+        'Se recomienda documentar la respuesta del área para cerrar el seguimiento en el informe siguiente.',
+      ],
+      accion_inmediata:
+        'El equipo de IT debería conversar con el referente de Ventas antes del cierre del día para confirmar si el acceso nocturno fue autorizado.',
+    },
+    {
+      id: 'CEO-MOCK-03',
+      tipo: 'ceo',
+      created_at: new Date(now - 50 * 3600 * 1000).toISOString(),
+      semaforo: 'rojo',
+      headline: 'Hay una situación que requiere atención',
+      subline: 'Se identificó un intento sostenido de acceso a información sensible.',
+      paragraphs: [
+        'Los sistemas registraron varios intentos encadenados sobre carpetas restringidas, con un volumen inusual frente al baseline de la semana anterior.',
+        'El equipo técnico aplicó medidas de contención y está validando si alguna sesión legítima quedó bloqueada por error.',
+        'Hasta confirmar el origen, se mantiene un nivel de alerta alto y comunicación directa con dirección.',
+      ],
+      accion_inmediata:
+        'Dirección debe estar disponible para una decisión rápida si el equipo de IT solicita reforzar el aislamiento de algún segmento de red.',
+    },
+    {
+      id: 'CEO-MOCK-04',
+      tipo: 'ceo',
+      created_at: new Date(now - 74 * 3600 * 1000).toISOString(),
+      semaforo: 'verde',
+      headline: 'La red opera con normalidad',
+      subline: 'No hay incidentes críticos activos.',
+      paragraphs: [
+        'La jornada transcurrió sin desvíos relevantes respecto a los últimos cinco días laborables.',
+        'Las revisiones periódicas del equipo de seguridad confirmaron que los controles respondieron como estaba previsto.',
+        'Se sugiere mantener el calendario de simulacros y capacitaciones ya planificado.',
+      ],
+    },
+    {
+      id: 'CEO-MOCK-05',
+      tipo: 'ceo',
+      created_at: new Date(now - 98 * 3600 * 1000).toISOString(),
+      semaforo: 'naranja',
+      headline: 'Hay señales que conviene revisar',
+      subline: 'Aumentó el volumen de solicitudes de restablecimiento de contraseña.',
+      paragraphs: [
+        'El servicio de ayuda recibió más tickets de lo habitual relacionados con accesos, sin que medie un corte de servicio visible.',
+        'Es un patrón compatible con fatiga de credenciales o con una campaña de correo que pide cambios; aún no hay confirmación.',
+        'El monitoreo continuará durante 48 horas y se actualizará el tablero ejecutivo si el volumen no baja.',
+      ],
+    },
+  ]
+}
+
+/**
  * Snapshot completo para setInitialState en desarrollo (timestamps frescos en cada llamada).
  */
 export function buildDevMockInitialState() {
@@ -315,12 +394,15 @@ export function buildDevMockInitialState() {
     },
   ]
 
+  const ceo_analyses = buildMockCeoAnalyses()
+
   return {
     last_events,
     risk_identities,
     identity_baselines,
     hunting_identity_ids,
     ai_memos,
+    ceo_analyses,
     stats: {
       eventos_por_min: 38,
       alertas_abiertas: alerts.length + incidents.length,

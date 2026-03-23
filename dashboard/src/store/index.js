@@ -16,6 +16,8 @@ export const useStore = create((set) => ({
   incidents: [],        // incidentes abiertos
   alerts: [],           // alertas recientes (fusionando incidentes y honeypots)
   aiMemos: [],          // memos de AI
+  /** Análisis CEO normalizados (más reciente primero). */
+  ceoAnalyses: [],
   stats: {},            // estadísticas generales
   healthReport: null,
   healthThroughput: [],
@@ -112,6 +114,13 @@ export const useStore = create((set) => ({
   addAiMemo: (memo) => set((state) => ({ 
     aiMemos: [memo, ...state.aiMemos] 
   })),
+
+  addCeoAnalysis: (analysis) =>
+    set((state) => {
+      if (!analysis?.id) return state
+      const rest = state.ceoAnalyses.filter((a) => a.id !== analysis.id)
+      return { ceoAnalyses: [analysis, ...rest].slice(0, 24) }
+    }),
   
   updateStats: (newStats) => set((state) => ({ 
     stats: { ...state.stats, ...newStats } 
@@ -140,6 +149,7 @@ export const useStore = create((set) => ({
         health_throughput,
         identity_baselines,
         hunting_identity_ids,
+        ceo_analyses,
       } = payload
 
       const idsMap = (risk_identities || []).reduce(
@@ -174,6 +184,9 @@ export const useStore = create((set) => ({
       }
       if (Array.isArray(hunting_identity_ids)) {
         next.huntingIdentityIds = hunting_identity_ids.map(String)
+      }
+      if (Array.isArray(ceo_analyses)) {
+        next.ceoAnalyses = ceo_analyses
       }
 
       return next

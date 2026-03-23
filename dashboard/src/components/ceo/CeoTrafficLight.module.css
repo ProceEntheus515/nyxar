@@ -1,0 +1,57 @@
+.card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--base-border);
+  padding: clamp(var(--space-4), 2vw, var(--space-6));
+  margin-bottom: 0;
+  text-align: left;
+  background: var(--base-surface);
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.cardVerde {
+  border-color: color-mix(in srgb, var(--clean-bright) 35%, var(--base-border));
+  background: color-mix(in srgb, var(--clean-muted) 12%, var(--base-surface));
+}
+
+.cardNaranja {
+  border-color: color-mix(in srgb, var(--medium-bright) 45%, var(--base-border));
+  background: color-mix(in srgb, var(--medium-muted) 14%, var(--base-surface));
+}
+
+.cardRojo {
+  border-color: color-mix(in srgb, var(--critical-bright) 40%, var(--base-border));
+  background: color-mix(in srgb, var(--critical-muted) 12%, var(--base-surface));
+}
+
+.glyph {
+  flex-shrink: 0;
+  font-size: clamp(1.5rem, 2.5vw, 1.85rem);
+  line-height: 1;
+  margin: 2px 0 0 0;
+}
+
+.textBlock {
+  min-width: 0;
+  flex: 1;
+}
+
+.headline {
+  font-family: var(--font-ui);
+  font-size: clamp(var(--text-md), 2vw, var(--text-lg));
+  font-weight: var(--weight-semibold);
+  color: var(--base-bright);
+  margin: 0 0 var(--space-2) 0;
+  line-height: var(--leading-snug);
+}
+
+.subline {
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  color: var(--base-soft);
+  margin: 0;
+  max-width: none;
+  line-height: var(--leading-normal);
+}

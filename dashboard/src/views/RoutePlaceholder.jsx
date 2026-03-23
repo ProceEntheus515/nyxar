@@ -1,7 +1,7 @@
 import styles from './RoutePlaceholder.module.css'
 
 /**
- * Vista mínima para rutas aún sin pantalla (F06: Respuestas, Reportes, CEO).
+ * Vista mínima para rutas aún sin pantalla (F06: Respuestas, Reportes).
  */
 export default function RoutePlaceholder({ title, description }) {
   return (
