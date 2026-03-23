@@ -1,0 +1,221 @@
+.list {
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  background: var(--bg-03);
+  border-bottom: 1px solid var(--border-strong);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  gap: 8px;
+}
+
+/* Alineación con fila: punto 6px + gap 8px */
+.headerLeading {
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.headerExpandSpacer {
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.headerMain {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-data);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-code);
+  color: var(--tx-03);
+  text-transform: uppercase;
+}
+
+.headerCol {
+  width: 7ch;
+  flex-shrink: 0;
+  font-family: var(--font-data);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-code);
+  color: var(--tx-03);
+  text-align: right;
+  padding-left: 8px;
+  text-transform: uppercase;
+}
+
+.headerColWithDivider {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  height: var(--row-height);
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  gap: 8px;
+  border-left: 2px solid transparent;
+  box-sizing: border-box;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.row:hover {
+  background: var(--bg-04);
+}
+
+.selected {
+  background: var(--action-dim);
+  border-left-color: var(--action);
+}
+
+.alertRow {
+  border-left-color: var(--alert);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statusDot[data-level='critical'] {
+  background: var(--alert-text);
+  box-shadow: 0 0 4px var(--alert);
+}
+
+.statusDot[data-level='high'] {
+  background: var(--state-high);
+}
+
+.statusDot[data-level='medium'] {
+  background: var(--state-med);
+}
+
+.statusDot[data-level='low'] {
+  background: var(--state-low);
+}
+
+.statusDot[data-level='nominal'] {
+  background: var(--tx-03);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.mainText {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  color: var(--tx-01);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.subtitle {
+  font-family: var(--font-data);
+  font-size: var(--text-micro);
+  color: var(--tx-03);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.colRight {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.colDivider {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.colValue {
+  width: 7ch;
+  font-family: var(--font-data);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-code);
+  color: var(--tx-02);
+  text-align: right;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.colValue[data-semantic='critical'] {
+  color: var(--alert-text);
+}
+
+.colValue[data-semantic='high'] {
+  color: var(--state-high);
+}
+
+.colValue[data-semantic='medium'] {
+  color: var(--state-med);
+}
+
+.colValue[data-semantic='active'] {
+  color: var(--action-text);
+}
+
+.expandIndicator {
+  font-family: var(--font-data);
+  font-size: var(--text-micro);
+  color: var(--tx-03);
+  width: 12px;
+  flex-shrink: 0;
+  text-align: center;
+  line-height: 1;
+}
+
+.childRow {
+  display: flex;
+  align-items: center;
+  height: var(--row-height-compact);
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-01);
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.childIndent {
+  width: 24px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border-strong);
+  align-self: stretch;
+  margin-left: 3px;
+}
+
+.childText {
+  font-size: var(--text-sm);
+  color: var(--tx-02);
+}
+
+.rowExpanded {
+  border-bottom-color: var(--border-strong);
+}

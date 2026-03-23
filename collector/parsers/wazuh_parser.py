@@ -10,6 +10,7 @@ import uvicorn
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
 from shared.wazuh_logons import insert_wazuh_logon_if_applicable, logon_rule_ids
+from collector.normalizer import Normalizer
 
 logger = get_logger("collector.parsers.wazuh")
 
@@ -28,9 +29,15 @@ class WazuhParser:
     Opcionalmente persiste logons en Mongo (wazuh_logons) para mapa ip->usuario.
     """
 
-    def __init__(self, redis_bus: RedisBus, mongo_client: Optional[Any] = None):
+    def __init__(
+        self,
+        redis_bus: RedisBus,
+        normalizer: Normalizer,
+        mongo_client: Optional[Any] = None,
+    ):
         self.redis_bus = redis_bus
         self.mongo_client = mongo_client
+        self.normalizer = normalizer
         port_env = os.getenv("WAZUH_WEBHOOK_PORT", "9000")
         self.port = int(port_env)
         self.app = FastAPI(title="Wazuh Webhook Parser")
@@ -69,8 +76,12 @@ class WazuhParser:
                                     "No se pudo persistir wazuh_logon: %s",
                                     ex,
                                 )
-                        bus_payload = {"source": "wazuh", "raw": event_dict}
-                        await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, bus_payload)
+                        evento = await self.normalizer.normalize(payload, "wazuh")
+                        if evento:
+                            await self.redis_bus.publish_event(
+                                self.redis_bus.STREAM_RAW,
+                                evento.to_redis_dict(),
+                            )
 
                         await self._invalidate_identity_session_cache_if_needed(
                             payload,

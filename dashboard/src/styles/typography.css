@@ -1,0 +1,89 @@
+/*
+ * NYXAR — Dense typography (PROMPTS_V3_v2 / F02)
+ * Máxima densidad: tamaños 10–16px salvo metric-value (20px).
+ * line-height 1.4× para lectura de datos (unitless 1.4).
+ * Sin italic en datos; font-weight máximo 600 en este sistema.
+ */
+
+/* Código operacional — P5, ATD, MTS, estados en columnas derechas */
+.code-op {
+  font-family: var(--font-data);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-code);
+  text-transform: uppercase;
+  color: var(--tx-03);
+  line-height: 1.4;
+  font-style: normal;
+}
+
+/* Metadata de columna — headers, timestamps */
+.meta {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-normal);
+  color: var(--tx-03);
+  line-height: 1.4;
+  font-style: normal;
+}
+
+/* Cuerpo de interfaz estándar */
+.body-ui {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: var(--weight-normal);
+  color: var(--tx-01);
+  line-height: 1.4;
+  font-style: normal;
+}
+
+/* Valor técnico — IP, dominio, hash, puerto (siempre monospace) */
+.data-value {
+  font-family: var(--font-data);
+  font-size: var(--text-sm);
+  color: var(--tx-01);
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  font-weight: var(--weight-normal);
+  font-style: normal;
+}
+
+/* Métrica hero — único bloque grande permitido */
+.metric-value {
+  font-family: var(--font-data);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.4;
+  color: var(--tx-00);
+  font-style: normal;
+}
+
+/* Título de sección — autoridad por posición, no por tamaño */
+.section-title {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-code);
+  text-transform: uppercase;
+  color: var(--tx-03);
+  line-height: 1.4;
+  font-style: normal;
+}
+
+/* Título de vista — tope 16px en UI */
+.view-title {
+  font-family: var(--font-ui);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--tx-00);
+  line-height: 1.4;
+  font-style: normal;
+}
+
+/* Columnas derechas: metadata y .code-op alineados a la derecha (estructura tipo Palantir) */
+.col-meta-end {
+  text-align: right;
+}

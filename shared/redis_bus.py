@@ -4,7 +4,7 @@ import time
 import uuid
 import asyncio
 import redis.asyncio as redis
-from typing import Optional, List, Callable, Any, Tuple
+from typing import Optional, List, Callable, Any, Tuple, Dict, Union
 from shared.logger import get_logger
 
 logger = get_logger("redis_bus")
@@ -60,6 +60,25 @@ class RedisBus:
 
     # --- STREAMS ---
 
+    async def create_consumer_group(
+        self, stream: str, group: str, start_id: str = "0"
+    ) -> None:
+        """Crea el consumer group. Si ya existe (BUSYGROUP), no hace nada."""
+
+        async def op():
+            try:
+                await self.client.xgroup_create(
+                    name=stream,
+                    groupname=group,
+                    id=start_id,
+                    mkstream=True,
+                )
+            except redis.ResponseError as e:
+                if "BUSYGROUP" not in str(e):
+                    raise
+
+        await self._retry_operation(op)
+
     async def publish_event(self, stream: str, evento: dict) -> str:
         async def op():
             return await self.client.xadd(stream, {"data": json.dumps(evento)}, maxlen=10000)
@@ -67,13 +86,8 @@ class RedisBus:
 
     async def consume_events(self, stream: str, group: str, consumer: str, count: int = 10) -> List[Tuple[str, dict]]:
         async def op():
-            try:
-                # Crea el Consumer Group, mkstream=True crea el stream si no existe
-                await self.client.xgroup_create(stream, group, mkstream=True)
-            except redis.ResponseError as e:
-                if "BUSYGROUP" not in str(e):
-                    raise
-            
+            await self.create_consumer_group(stream, group)
+
             # '>' significa mensajes nunca leidos por ningún consumidor de este grupo
             messages = await self.client.xreadgroup(group, consumer, {stream: ">"}, count=count)
             results = []
@@ -104,6 +118,33 @@ class RedisBus:
         except Exception as e:
             logger.warning("stream_length %s: %s", stream, e)
             return 0
+
+    async def get_stream_length(self, stream: str) -> int:
+        """Alias explícito para contratos de integración (I02)."""
+        return await self.stream_length(stream)
+
+    async def get_consumer_group_info(
+        self, stream: str, group: str
+    ) -> Dict[str, Union[str, int, bytes]]:
+        """Info del consumer group en stream; dict vacío si no existe."""
+
+        async def op():
+            groups = await self.client.xinfo_groups(stream)
+            for g in groups:
+                name = g.get("name")
+                if isinstance(name, bytes):
+                    name = name.decode("utf-8", errors="replace")
+                if name == group:
+                    return dict(g)
+            return {}
+
+        if not self.client:
+            return {}
+        try:
+            return await self._retry_operation(op)
+        except Exception as e:
+            logger.warning("get_consumer_group_info %s %s: %s", stream, group, e)
+            return {}
 
     async def stream_latest_payload(self, stream: str) -> Optional[dict]:
         """Última entrada del stream (XREVRANGE count=1); payload JSON en campo data."""

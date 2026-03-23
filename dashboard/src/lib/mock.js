@@ -151,6 +151,7 @@ function buildMockIdentities() {
       es_privilegiado,
       last_seen_ts: new Date(Date.now() - (i % 9) * 120000).toISOString(),
       risk_sparkline_24h: mockRiskSpark24h(score),
+      ...(i === 8 ? { graph_kind: 'external' } : {}),
     }
   })
 }

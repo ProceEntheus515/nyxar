@@ -47,12 +47,16 @@ class CorrelatorEngine:
             
             logger.critical(f"ALERTA GENERADA - Host: {inc.host_afectado} | Patron: {inc.patron} | Severidad: {inc.severidad} | Mitre: {inc.mitre_technique}")
 
-            # 2. Publicar al canal que consume api/websocket (redis_listener)
-            await self.redis_bus.publish_alert("alerts", inc.model_dump(mode="json"))
+            # 2. Publicar al dashboard (API websocket escucha "alerts"; I03 también "dashboard:alerts")
+            payload = inc.model_dump(mode="json")
+            await self.redis_bus.publish_alert("alerts", payload)
+            await self.redis_bus.publish_alert(
+                "dashboard:alerts",
+                {"tipo": "new_incident", "data": payload},
+            )
             
             # 3. Guardar permanente en MongoDB
-            inc_dict = inc.model_dump(mode="json")
-            await self.mongo_client.db.incidents.insert_one(inc_dict)
+            await self.mongo_client.db.incidents.insert_one(payload)
 
             # 4. Actualizar score de la identidad
             incremento = self._get_severity_score(inc.severidad)
@@ -69,7 +73,7 @@ class CorrelatorEngine:
         except Exception as e:
             logger.error(f"Fallo salvando incidente {inc.id}: {e}")
 
-    async def _procesar_evento(self, msg_id: bytes, raw: dict) -> bytes:
+    async def _procesar_evento(self, msg_id, raw: dict):
         try:
             if "externo" not in raw or "interno" not in raw:
                 # Fallback de malformación? Si no lo parseó el enricher bien.
@@ -120,6 +124,9 @@ class CorrelatorEngine:
         logger.info(f"Conectando CorrelatorEngine (Consumer: {self.consumer_name})...")
         await self.redis_bus.connect()
         await self.mongo_client.connect()
+        await self.redis_bus.create_consumer_group(
+            self.redis_bus.STREAM_ENRICHED, self.group_name
+        )
         hb_task = asyncio.create_task(heartbeat_loop(self.redis_bus, "correlator"), name="correlator-hb")
 
         try:
@@ -139,10 +146,16 @@ class CorrelatorEngine:
                     ops = [self._procesar_evento(mid, raw) for mid, raw in eventos]
                     procesados = await asyncio.gather(*ops, return_exceptions=True)
 
-                    acks = [p for p in procesados if isinstance(p, bytes)]
+                    acks = [
+                        p
+                        for p in procesados
+                        if not isinstance(p, BaseException) and p is not None
+                    ]
                     if acks:
                         await self.redis_bus.acknowledge(
-                            self.redis_bus.STREAM_ENRICHED, self.group_name, acks
+                            self.redis_bus.STREAM_ENRICHED,
+                            self.group_name,
+                            *[str(x) for x in acks],
                         )
 
                 except Exception as e:

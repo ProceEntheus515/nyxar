@@ -1,4 +1,8 @@
-import EventCard from '../data/EventCard'
+import {
+  TargetListRow,
+  eventToTimelineTargetItem,
+  TIMELINE_TARGET_COLUMNS,
+} from '../data/TargetList'
 import styles from './TimelineFeedRow.module.css'
 
 const THIRTY_MIN_MS = 30 * 60 * 1000
@@ -19,9 +23,8 @@ function parseTs(iso) {
 }
 
 /**
- * Fila del feed virtualizado: EventCard + separador temporal como overlay (no fila extra).
- *
- * react-window v2 hace spread de `rowProps` sobre el row: no recibe un objeto `rowProps`.
+ * Fila virtualizada del Timeline: TargetList (F08) + separador temporal en overlay.
+ * react-window v2 hace spread de rowProps en la raíz del row.
  */
 export default function TimelineFeedRow({
   index,
@@ -31,6 +34,7 @@ export default function TimelineFeedRow({
   selectedEventId,
   onEventSelect,
   compactFeed,
+  targetColumns = TIMELINE_TARGET_COLUMNS,
 }) {
   if (!filteredEvents) return null
   const e = filteredEvents[index]
@@ -48,6 +52,7 @@ export default function TimelineFeedRow({
   }
 
   const selected = selectedEventId != null && String(selectedEventId) === String(e.id)
+  const item = eventToTimelineTargetItem(e)
 
   return (
     <div style={style} {...ariaAttributes} className={styles.cell}>
@@ -59,13 +64,16 @@ export default function TimelineFeedRow({
         </div>
       ) : null}
       <div className={`${styles.body} ${showSep ? styles.bodyWithSep : ''}`.trim()}>
-        <EventCard
-          event={e}
-          compact={compactFeed}
-          dense={compactFeed}
-          selected={selected}
-          onClick={() => onEventSelect?.(e)}
-        />
+        {item ? (
+          <TargetListRow
+            item={item}
+            columns={targetColumns}
+            isSelected={selected}
+            onSelect={() => onEventSelect?.(e)}
+            enableChildren={false}
+            showSubtitle={!compactFeed}
+          />
+        ) : null}
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-﻿# 🎨 NYXAR — PROMPTS_V3.md
+# 🎨 NYXAR — PROMPTS_V3.md
 ## Sistema de Diseño Frontend Completo
 
 > **Dirección de diseño:** "Operational Intelligence Interface"
@@ -80,7 +80,7 @@ RESTRICCIONES ABSOLUTAS:
 ## F01 — Design Tokens
 
 ### PROMPT F01 — Design System Foundation
-**Rol:** 🎨 Design System Engineer  
+**Rol:** Design System Engineer  
 **Entregable:** `dashboard/src/styles/tokens.css` — la fuente de verdad de todo el sistema visual
 
 ```
@@ -295,7 +295,7 @@ NO HAGAS:
 ## F02 — Tipografía
 
 ### PROMPT F02 — Typography System
-**Rol:** 🎨 Typography Designer  
+**Rol:** Typography Designer  
 **Entregable:** `dashboard/src/styles/typography.css` + guía de uso
 
 ```
@@ -432,7 +432,7 @@ NO HAGAS:
 ## F03 — Sistema de Color
 
 ### PROMPT F03 — Color Semantics
-**Rol:** 🎨 Color Systems Designer  
+**Rol:** Color Systems Designer  
 **Entregable:** `dashboard/src/styles/colors.js` — helper de color semántico
 
 ```
@@ -570,7 +570,7 @@ NO HAGAS:
 ## F04 — Sistema de Animaciones
 
 ### PROMPT F04 — Motion System
-**Rol:** 🎨 Motion Designer  
+**Rol:** Motion Designer  
 **Entregable:** `dashboard/src/styles/motion.css` + `dashboard/src/hooks/useAnimation.js`
 
 ```
@@ -753,7 +753,7 @@ NO HAGAS:
 ## F05 — Layout Shell
 
 ### PROMPT F05 — App Shell Layout
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Entregable:** `dashboard/src/components/layout/AppShell.jsx`
 
 ```
@@ -767,7 +767,7 @@ ESTRUCTURA DEL LAYOUT:
 ```
 ┌─────────────────────────────────────────────────────┐
 │  STATUS BAR (28px)                                   │  ← siempre visible
-│  CP LATAM  ●LIVE  EVENTOS/MIN  ALERTAS ABIERTAS     │
+│  NYXAR  ●LIVE  EVENTOS/MIN  ALERTAS ABIERTAS        │
 ├──────────┬──────────────────────────┬────────────────┤
 │          │                          │                │
 │   NAV    │     MAIN CONTENT         │  DETAIL PANEL  │
@@ -839,7 +839,7 @@ NO HAGAS:
 ## F06 — Navigation
 
 ### PROMPT F06 — Sidebar Navigation
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Entregable:** `dashboard/src/components/layout/Sidebar.jsx`
 
 ```
@@ -850,11 +850,10 @@ ARCHIVO: dashboard/src/components/layout/Sidebar.jsx
 
 DISEÑO DEL SIDEBAR:
 
-Parte superior:
+Parte superior (marca NYXAR únicamente; el wordmark puede ir en el SVG, sin subtítulos regionales ni nombres legacy):
 ```
 ┌────────────────────────┐
-│  ⬡ NYXAR          │  ← logo + nombre, 44px de alto
-│    LATAM               │
+│  ⬡ NYXAR               │  ← logo + marca, ~44px de alto
 ├────────────────────────┤
 │                        │
 │  ◉ Red                 │  ← NetworkMap
@@ -922,6 +921,8 @@ Son más livianos, más únicos, y renderizan mejor en --font-data.
 - ⊡ cuadrado (sistema/health)
 
 REGLAS:
+- Marca en UI: solo NYXAR (alineado a la dirección "Operational Intelligence Interface");
+  prohibido CP LATAM, CyberPulse, subtítulos regionales o variantes de nombre legacy.
 - Los nav items son <a> o <NavLink> de React Router, nunca <div> clickeable.
 - El indicador activo es CSS puro — no requiere JavaScript para el estilo.
 - Los badges se actualizan via Zustand sin re-renderizar todo el Sidebar.
@@ -938,7 +939,7 @@ NO HAGAS:
 ## F07 — Componentes Atómicos
 
 ### PROMPT F07 — Atomic Components
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Entregable:** Todos los componentes base en `dashboard/src/components/ui/`
 
 ```
@@ -1066,7 +1067,7 @@ NO HAGAS:
 ## F08 — Componentes de Datos
 
 ### PROMPT F08 — Data Components
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Entregable:** `dashboard/src/components/data/` — cards y listas
 
 ```
@@ -1182,7 +1183,7 @@ NO HAGAS:
 ## F09 — Visualizaciones
 
 ### PROMPT F09 — Data Visualizations
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Entregable:** `dashboard/src/components/charts/`
 
 ```
@@ -1278,7 +1279,7 @@ NO HAGAS:
 ## F10 — NetworkMap View
 
 ### PROMPT F10 — Network Map View
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Entregable:** `dashboard/src/views/NetworkMap.jsx`
 
 ```
@@ -1376,7 +1377,7 @@ NO HAGAS:
 ## F11 — Timeline View
 
 ### PROMPT F11 — Timeline View
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Entregable:** `dashboard/src/views/Timeline.jsx`
 
 ```
@@ -1460,7 +1461,7 @@ NO HAGAS:
 ## F12 — Identities View
 
 ### PROMPT F12 — Identities View
-**Rol:** ⚛️ Frontend Developer  
+**Rol:** Frontend Developer  
 **Entregable:** `dashboard/src/views/Identities.jsx`
 
 ```
@@ -1550,7 +1551,7 @@ NO HAGAS:
 ## F13 — CEO View
 
 ### PROMPT F13 — CEO View
-**Rol:** ⚛️ Frontend Developer + Content Designer  
+**Rol:** Frontend Developer + Content Designer  
 **Entregable:** `dashboard/src/views/CeoView.jsx`
 
 ```

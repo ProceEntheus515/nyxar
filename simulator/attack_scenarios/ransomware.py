@@ -54,7 +54,7 @@ class RansomwareScenario(BaseAttackScenario):
                     "status": "NOERROR",
                     "blocked": False
                 }
-                await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "dns", "raw": dns_event})
+                await self._publish_normalized(dns_event, "dns")
                 
                 # Proxy payload para el ping home
                 proxy_event = {
@@ -66,7 +66,7 @@ class RansomwareScenario(BaseAttackScenario):
                     "bytes": str(random.randint(150, 400)), # Muy chicos, heartbeats
                     "destination_ip": f"{random.randint(1,255)}.120.50.4"
                 }
-                await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "proxy", "raw": proxy_event})
+                await self._publish_normalized(proxy_event, "proxy")
                 
                 await asyncio.sleep(beacon_interval_real)
                 
@@ -98,7 +98,7 @@ class RansomwareScenario(BaseAttackScenario):
                     "dst_port": random.choice(["445", "139", "3389"]),
                     "protocol": "TCP"
                 }
-                await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "firewall", "raw": fw_event})
+                await self._publish_normalized(fw_event, "firewall")
                 await asyncio.sleep(0.5 / self.time_multiplier)
 
             if intensity == "media":
@@ -124,7 +124,7 @@ class RansomwareScenario(BaseAttackScenario):
                     "bytes": f"{random.randint(50, 200) * 1024 * 1024}", # 50-200 GB
                     "destination_ip": "185.10.15.5"
                 }
-                await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "proxy", "raw": proxy_event})
+                await self._publish_normalized(proxy_event, "proxy")
                 await asyncio.sleep(30 / self.time_multiplier)
                 
             # Honeypot final Hit
@@ -142,16 +142,22 @@ class RansomwareScenario(BaseAttackScenario):
             # Agregamos evento especializado
             # Para esto el collector/correlator podría recibir logs enriquecidos de un fw.
             # Según prompt: (genera un evento especial de tipo honeypot_hit). Lo tiramos directo al bus o vía webhook falso
-            await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "wazuh", "raw": {
-                "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.000+0000"),
-                "agent": {"ip": self.target["dispositivo"], "name": self.target["hostname"]},
-                "rule": {
-                    "level": 14,
-                    "description": f"Ransomware honeypot trigger: attempt to access \\\\fileserver01\\BACKUP_FINANCIERO_2025",
-                    "groups": ["ransomware", "honeypot"],
-                    "id": "100001"
-                }
-            }})
+            await self._publish_normalized(
+                {
+                    "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.000+0000"),
+                    "agent": {
+                        "ip": self.target["dispositivo"],
+                        "name": self.target["hostname"],
+                    },
+                    "rule": {
+                        "level": 14,
+                        "description": f"Ransomware honeypot trigger: attempt to access \\\\fileserver01\\BACKUP_FINANCIERO_2025",
+                        "groups": ["ransomware", "honeypot"],
+                        "id": "100001",
+                    },
+                },
+                "wazuh",
+            )
             
             logger.critical("[RANSOMWARE] Secuencia finalizada. Máquina comprometida totalmente.")
             

@@ -50,7 +50,7 @@ class DnsTunnelingScenario(BaseAttackScenario):
                 "status": "NOERROR",
                 "blocked": False
             }
-            await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "dns", "raw": dns_event})
+            await self._publish_normalized(dns_event, "dns")
             
             bytes_exfiltrados += len(subdomain)
             

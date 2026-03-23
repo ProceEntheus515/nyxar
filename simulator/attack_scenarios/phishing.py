@@ -73,7 +73,7 @@ class PhishingScenario(BaseAttackScenario):
                 "status": "NOERROR",
                 "blocked": False # Dominio nuevo, nunca cae en block
             }
-            await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "dns", "raw": dns_event})
+            await self._publish_normalized(dns_event, "dns")
             
             # 60% click (Proxy Event)
             if random.random() <= 0.60:
@@ -86,7 +86,7 @@ class PhishingScenario(BaseAttackScenario):
                     "bytes": "8540",
                     "destination_ip": fake.ipv4()
                 }
-                await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "proxy", "raw": proxy_event})
+                await self._publish_normalized(proxy_event, "proxy")
                 logger.info(f"[PHISHING] Víctima {victima['id']} ha CAÍDO en el engaño (click).")
             else:
                 logger.info(f"[PHISHING] Víctima {victima['id']} resolvió DNS pero NO ingresó a la web.")

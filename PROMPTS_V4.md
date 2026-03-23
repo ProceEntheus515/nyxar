@@ -76,7 +76,7 @@ FORMATO DE EVENTO COMPARTIDO (inmutable, todos los servicios lo conocen):
 
 ---
 
-## 🔌 FASE 1 — Integraciones del Pipeline Principal
+## FASE 1 — Integraciones del Pipeline Principal
 
 ---
 

@@ -1,0 +1,187 @@
+/*
+ * NYXAR — Principio de densidad (PROMPTS_V3_v2 / F03)
+ * Utilidades para filas, tablas y chips. No redefine --space-* del design system
+ * (tokens.css); aquí se usan px explícitos donde F03 pide 8px/10px para no romper el resto de la app.
+ */
+
+/* ─── FILAS DE DATOS ─────────────────────────────────────────── */
+.data-row {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--row-height);
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+  cursor: default;
+  position: relative;
+}
+
+.data-row:hover {
+  background: var(--bg-04);
+}
+
+.data-row.selected {
+  background: var(--action-dim);
+  border-left: 2px solid var(--action);
+}
+
+.data-row.alert {
+  border-left: 2px solid var(--alert);
+}
+
+.data-row.compact {
+  height: var(--row-height-compact);
+}
+
+/* ─── COLUMNAS (flex) ─────────────────────────────────────────── */
+.col-status {
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.col-main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.col-type {
+  width: 80px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.col-code {
+  width: 7ch;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.col-value {
+  width: 6ch;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+/* ─── SEPARADOR DE COLUMNA ───────────────────────────────────── */
+.col-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  flex-shrink: 0;
+  margin: 0 8px;
+}
+
+/* ─── TABLAS DE DATOS ───────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  height: 24px;
+  padding: 0 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--bg-03);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.data-table th.right {
+  text-align: right;
+}
+
+.data-table td {
+  height: var(--row-height);
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-table tr:hover td {
+  background: var(--bg-04);
+}
+
+.data-table tr.selected td {
+  background: var(--action-dim);
+}
+
+.data-table tr.selected td:first-child {
+  box-shadow: inset 2px 0 0 0 var(--action);
+}
+
+/* ─── PANELES INFORMACIÓN ───────────────────────────────────── */
+.info-panel {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0;
+}
+
+.info-panel .label {
+  height: var(--row-height);
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  background: var(--bg-03);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.info-panel .value {
+  height: var(--row-height);
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  background: var(--bg-02);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── CHIPS DE ESTADO ───────────────────────────────────────── */
+.state-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-chip);
+  border: 1px solid currentColor;
+  font-family: var(--font-data);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-code);
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.state-chip.critical {
+  color: var(--alert-text);
+  background: var(--alert-dim);
+}
+
+.state-chip.high {
+  color: var(--state-high);
+  background: transparent;
+}
+
+.state-chip.medium {
+  color: var(--state-med);
+  background: transparent;
+}
+
+.state-chip.low {
+  color: var(--state-low);
+  background: transparent;
+}
+
+.state-chip.unknown {
+  color: var(--state-unknown);
+  background: transparent;
+}
+
+.state-chip.active {
+  color: var(--action-text);
+  background: var(--action-dim);
+}

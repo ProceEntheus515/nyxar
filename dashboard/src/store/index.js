@@ -110,6 +110,17 @@ export const useStore = create((set) => ({
   addAlert: (alert) => set((state) => ({ 
     alerts: [alert, ...state.alerts] 
   })),
+
+  /** Mismo destino que alertas en UI; nombre alineado al contrato WebSocket (honeypot_hit). */
+  addHoneypotHit: (hit) => set((state) => ({
+    alerts: [hit, ...state.alerts],
+  })),
+
+  /** Propuesta SOAR / auto_response vía socket response_proposal. */
+  addProposal: () =>
+    set((state) => ({
+      responseProposalsPending: state.responseProposalsPending + 1,
+    })),
   
   addAiMemo: (memo) => set((state) => ({ 
     aiMemos: [memo, ...state.aiMemos] 

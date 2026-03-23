@@ -94,8 +94,19 @@ class EnrichmentEngine:
         try:
             valor, tipo = self._extraer_target(evento)
             if not valor or not tipo:
-                return evento
-                
+                # Contrato I02: salida siempre con enrichment y risk_score
+                sin_ind = Enrichment(
+                    reputacion="desconocido",
+                    fuente="sin_indicador",
+                    tags=[],
+                )
+                return evento.model_copy(
+                    update={
+                        "enrichment": sin_ind,
+                        "risk_score": self._calcular_risk_score("desconocido"),
+                    }
+                )
+
             # PASO 2: Verificar Caché
             cached = await self.cache.get_enrichment(valor)
             if cached:
@@ -171,36 +182,47 @@ class EnrichmentEngine:
             
         except Exception as e:
             logger.error(f"Falla crítica enriqueciendo evento ID={evento.id}: {e}")
-            return evento
-
-
-    async def _procesar_evento(self, evt_id: bytes, raw_dict: dict) -> bytes:
-        """Helper para try-catch por el gather en la pipeline map-reduce"""
-        try:
-            # Rehidratar el model desde raw log parseado por normalizer
-            from collector.normalizer import Normalizer
-            norm = Normalizer(
-                self.redis_bus,
-                resolver=self.identity_resolver,
+            fallback = Enrichment(
+                reputacion="desconocido",
+                fuente="enrich_error",
+                tags=[],
             )
-            
-            # Nota: el stream RAW trae formates de "dns", "proxy" que ya pasaron por Normalizer en collector?
-            # Si el collector ya aplicó Pydantic -> lo leemos.
-            # Según diseño: collector -> raw
-            # Esperamos que Evento** dicte estrucutra limpia
-            
-            if "id" not in raw_dict:
-                # El bus recibió json puro
-                parsed_evento = await norm.normalize(raw_dict.get("raw", raw_dict), raw_dict.get("source", "unknown"))
-                if not parsed_evento:
-                    return evt_id
-            else:
+            return evento.model_copy(
+                update={
+                    "enrichment": fallback,
+                    "risk_score": self._calcular_risk_score("desconocido"),
+                }
+            )
+
+
+    async def _procesar_evento(self, evt_id, raw_dict: dict):
+        """Rehidrata Evento desde events:raw (contrato I01) o formato legacy source/raw."""
+        try:
+            parsed_evento: Optional[Evento] = None
+            if "id" in raw_dict:
                 parsed_evento = Evento(**raw_dict)
-                
+            elif raw_dict.get("source") and isinstance(raw_dict.get("raw"), dict):
+                # Compatibilidad: mensajes antiguos antes de normalizar en collector
+                from collector.normalizer import Normalizer
+
+                norm = Normalizer(self.redis_bus, resolver=self.identity_resolver)
+                src = str(raw_dict.get("source") or "unknown")
+                parsed_evento = await norm.normalize(raw_dict["raw"], src)
+            else:
+                logger.warning(
+                    "Payload events:raw no reconocido (falta id o source/raw): keys=%s",
+                    list(raw_dict.keys()),
+                )
+                return evt_id
+
+            if not parsed_evento:
+                return evt_id
+
             enriquecido = await self.enrich_event(parsed_evento)
-            
-            # Paso 2 del Loop: Republicar
-            await self.redis_bus.publish_event(self.redis_bus.STREAM_ENRICHED, enriquecido.model_dump(mode="json")) # Serializar fechas via Pydantic native
+            await self.redis_bus.publish_event(
+                self.redis_bus.STREAM_ENRICHED,
+                enriquecido.to_redis_dict(),
+            )
             return evt_id
         except Exception as e:
             logger.error(f"Failed enrichment payload procesing en consumer: {e}")
@@ -211,6 +233,10 @@ class EnrichmentEngine:
         await self.redis_bus.connect()
         await self.mongo_client.connect()
         self.identity_resolver = IdentityResolver(self.redis_bus, self.mongo_client)
+
+        await self.redis_bus.create_consumer_group(
+            self.redis_bus.STREAM_RAW, self.group_name
+        )
 
         # Lanzar paralelamente el scheduler de listas en este mismo worker
         asyncio.create_task(self.feeds.start_scheduler())

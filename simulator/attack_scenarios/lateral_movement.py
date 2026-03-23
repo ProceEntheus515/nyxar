@@ -56,7 +56,7 @@ class LateralMovementScenario(BaseAttackScenario):
                     "protocol": "TCP"
                 }
                 
-                await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "firewall", "raw": fw_event})
+                await self._publish_normalized(fw_event, "firewall")
                 
                 # Frecuencia: escaneo horizontal (1 intento c/ 2-5 segundos)
                 # Escalar x tiempo
@@ -77,7 +77,7 @@ class LateralMovementScenario(BaseAttackScenario):
             "dst_port": "5985", # WinRM
             "protocol": "TCP"
         }
-        await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "firewall", "raw": fw_dc_event})
+        await self._publish_normalized(fw_dc_event, "firewall")
         
         # Si lograron acceso al DC => alerta Wazuh critica 
         wz_event = {
@@ -90,5 +90,5 @@ class LateralMovementScenario(BaseAttackScenario):
                 "id": "60111"
             }
         }
-        await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "wazuh", "raw": wz_event})
+        await self._publish_normalized(wz_event, "wazuh")
         logger.error(f"[LATERAL MOVEMENT] Finalizado. El host {self.target['dispositivo']} tiene sesión PSSession viva en dc01.local")

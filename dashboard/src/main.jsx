@@ -10,6 +10,8 @@ import '@fontsource/geist-mono/600.css'
 import '@fontsource/geist-mono/700.css'
 import App from './App.jsx'
 import './styles/tokens.css'
+import './styles/typography.css'
+import './styles/density.css'
 import './styles/motion.css'
 import './styles/globals.css'
 

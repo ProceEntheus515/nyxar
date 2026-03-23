@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
+from collector.normalizer import Normalizer
 
 logger = get_logger("collector.parsers.proxy")
 
@@ -16,9 +17,10 @@ class ProxyParser:
     timestamp elapsed client action/status bytes method url user hierarchy/ip content_type
     """
 
-    def __init__(self, log_path: str, redis_bus: RedisBus):
+    def __init__(self, log_path: str, redis_bus: RedisBus, normalizer: Normalizer):
         self.log_path = log_path
         self.redis_bus = redis_bus
+        self.normalizer = normalizer
         self.position_key = "parser:proxy:last_position"
         self._processed_count = 0
         self._lines_since_save = 0
@@ -135,8 +137,12 @@ class ProxyParser:
                             h = hashlib.md5(raw_str.encode()).hexdigest()
                             
                             if not await self._is_duplicate(h):
-                                payload = {"source": "proxy", "raw": event_dict}
-                                await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, payload)
+                                evento = await self.normalizer.normalize(event_dict, "proxy")
+                                if evento:
+                                    await self.redis_bus.publish_event(
+                                        self.redis_bus.STREAM_RAW,
+                                        evento.to_redis_dict(),
+                                    )
                                 
                                 self._processed_count += 1
                                 self._lines_since_save += 1

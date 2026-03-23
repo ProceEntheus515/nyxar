@@ -1,13 +1,90 @@
-/* Fuentes Geist: @fontsource en main.jsx (antes de este archivo). */
-
-/* ═══════════════════════════════════════════════════════════
-   NYXAR — DESIGN TOKENS
-   Operational Intelligence Interface
-   ═══════════════════════════════════════════════════════════ */
+/*
+ * NYXAR — Design tokens (PROMPTS_V3_v2 / F01)
+ * Palantir-grade: fondos y texto en escala, dos acentos (acción + alerta).
+ * Los nombres legacy (--base-*, --cyan-*, etc.) se resuelven abajo para no romper el dashboard.
+ */
 
 :root {
+  /* ─── FONDO — 8 tonos ───────────────────────────────────── */
+  --bg-00: #060810;
+  --bg-01: #0a0d14;
+  --bg-02: #0e1219;
+  --bg-03: #12171f;
+  --bg-04: #181e28;
+  --bg-05: #1e2632;
 
-  /* ─── ESPACIOS (sistema 4pt) ──────────────────────────── */
+  /* ─── TEXTO — 5 tonos ───────────────────────────────────── */
+  --tx-00: #edf3fa;
+  --tx-01: #b8c8d8;
+  --tx-02: #7a8fa8;
+  --tx-03: #4a5a6a;
+  --tx-04: #2a3a4a;
+
+  /* ─── BORDES ────────────────────────────────────────────── */
+  --border: #1a2230;
+  --border-strong: #253040;
+
+  /* ─── ACCIÓN (cyan) — único acento de interacción ─────────── */
+  --action: #38b2cc;
+  --action-dim: #0d2535;
+  --action-border: #1a4a60;
+  --action-text: #5cc8e0;
+
+  /* ─── ALERTA (rojo) — solo crítico / acción inmediata ───── */
+  --alert: #c23b52;
+  --alert-dim: #1a0810;
+  --alert-border: #4a1520;
+  --alert-text: #e8455f;
+
+  /* ─── ESTADOS — solo texto / valor, no fondos de fila ───── */
+  --state-high: #c08a28;
+  --state-med: #a07020;
+  --state-low: #38a050;
+  --state-unknown: #4a5a6a;
+
+  /* ─── TIPOGRAFÍA (IBM Plex primero; Geist cargado en main.jsx) ─ */
+  --font-ui: 'IBM Plex Sans', 'Geist Sans', system-ui, sans-serif;
+  --font-data: 'IBM Plex Mono', 'Geist Mono', ui-monospace, monospace;
+
+  --text-micro: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --tracking-code: 0.06em;
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.08em;
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* ─── GEOMETRÍA — mínimo redondeo ───────────────────────── */
+  --radius-chip: 2px;
+  --radius-panel: 4px;
+  --radius-zero: 0px;
+  --radius-sm: var(--radius-chip);
+  --radius-md: 2px;
+  --radius-lg: var(--radius-panel);
+  --radius-full: 9999px;
+
+  --border-width: 1px;
+  --border-width-strong: 1px;
+
+  --col-divider: 1px solid var(--border);
+
+  /* ─── ESPACIADO (sistema 4pt; no en F01, se mantiene para layout) ─ */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -19,151 +96,32 @@
   --space-12: 48px;
   --space-16: 64px;
 
-  /* ─── COLORES BASE (no usar directamente en componentes) ─ */
-  --base-void: #080B0F;          /* el vacío — fondo más profundo */
-  --base-deep: #0C1018;          /* fondo principal de la app */
-  --base-surface: #111620;       /* cards y paneles */
-  --base-raised: #161D2E;        /* elementos elevados sobre surface */
-  --base-overlay: #1C2438;       /* tooltips, dropdowns, modales */
-  --base-border: #1F2B40;        /* bordes sutiles */
-  --base-border-strong: #2A3A55; /* bordes de énfasis */
-  --base-muted: #3D4F6A;         /* texto deshabilitado, placeholders */
-  --base-subtle: #6B7FA0;        /* texto secundario */
-  --base-soft: #A8B8D0;          /* texto terciario */
-  --base-text: #D8E4F0;          /* texto principal */
-  --base-bright: #EDF3FA;        /* texto de énfasis */
+  /* ─── LAYOUT ─────────────────────────────────────────────── */
+  --nav-width: 280px;
+  --nav-width-collapsed: 48px;
+  --panel-width: 340px;
+  --header-height: 36px;
+  --status-bar-height: 28px;
+  --row-height: 32px;
+  --row-height-compact: 26px;
 
-  /* ─── ACENTO PRIMARIO: Cyan operacional ─────────────────
-     No es el cyan neón de películas de hacking.
-     Es el cyan de monitores de control de misión.
-     Frío, preciso, confiable.                              */
-  --cyan-dim: #0A2535;           /* background de badges cyan */
-  --cyan-muted: #0D3347;         /* hover states suaves */
-  --cyan-border: #1A5E7A;        /* bordes de elementos cyan */
-  --cyan-soft: #2B8FAD;          /* cyan desaturado para texto */
-  --cyan-base: #38B2CC;          /* cyan principal — uso moderado */
-  --cyan-bright: #4FC3D9;        /* cyan de énfasis */
-  --cyan-glow: #67D4E8;          /* cyan para elementos activos */
+  /* ─── SOMBRAS — discretas, sin acento decorativo ─────────── */
+  --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-cyan: 0 0 0 1px var(--action-border);
+  --shadow-critical: 0 0 0 1px var(--alert-border);
 
-  /* ─── ESTADOS SEMÁNTICOS ─────────────────────────────── */
-  /* Crítico: no el rojo de error genérico.
-     El rojo de "esto requiere atención ahora." */
-  --critical-bg: #1A0A0E;
-  --critical-border: #5C1A24;
-  --critical-muted: #8B3040;
-  --critical-base: #C23B52;
-  --critical-bright: #E8455F;
-
-  /* Alto: naranja de advertencia industrial */
-  --high-bg: #160E05;
-  --high-border: #4A2C0A;
-  --high-muted: #7A4A14;
-  --high-base: #B8692A;
-  --high-bright: #D97F3A;
-
-  /* Medio: amarillo-ámbar (no amarillo chillón) */
-  --medium-bg: #141006;
-  --medium-border: #3D2E08;
-  --medium-muted: #6B4E10;
-  --medium-base: #A07020;
-  --medium-bright: #C08A28;
-
-  /* Limpio: verde de "sistema operando nominalmente" */
-  --clean-bg: #080E0A;
-  --clean-border: #0F3018;
-  --clean-muted: #1A5428;
-  --clean-base: #2A8040;
-  --clean-bright: #38A050;
-
-  /* Info: azul frío para datos neutrales */
-  --info-bg: #080E1A;
-  --info-border: #0F2040;
-  --info-muted: #1A3A6A;
-  --info-base: #2A5C9E;
-  --info-bright: #3872B8;
-
-  /* ─── PALETA ÁREAS (hash por nombre; espectro azul-teal, sin semántica de riesgo) ─ */
-  --area-palette-0: #2B8FAD;
-  --area-palette-1: #3872B8;
-  --area-palette-2: #4A6FA5;
-  --area-palette-3: #5B6E99;
-  --area-palette-4: #3D7A8A;
-  --area-palette-5: #2E6B7A;
-  --area-palette-6: #4A7C8A;
-  --area-palette-7: #3A6B8A;
-
-  /* ─── RISK SCORE GRADIENT ────────────────────────────────
-     Para el risk score (0-100) usar interpolación entre estos puntos.
-     No usar colores planos — el gradiente comunica urgencia graduada. */
-  --risk-0: #2A8040;    /* 0 */
-  --risk-25: #A07020;   /* 25 */
-  --risk-50: #B8692A;   /* 50 */
-  --risk-75: #C23B52;   /* 75 */
-  --risk-100: #E8455F;  /* 100 */
-
-  /* ─── TIPOGRAFÍA ─────────────────────────────────────── */
-  --font-ui: 'Geist Sans', system-ui, sans-serif;
-  --font-data: 'Geist Mono', ui-monospace, monospace;
-
-  --text-xs: 11px;       /* labels, badges, metadata */
-  --text-sm: 13px;       /* texto secundario */
-  --text-base: 14px;     /* texto de interfaz principal */
-  --text-md: 15px;       /* texto de contenido */
-  --text-lg: 18px;       /* títulos de sección */
-  --text-xl: 22px;       /* títulos de vista */
-  --text-2xl: 28px;      /* hero numbers */
-  --text-3xl: 36px;      /* métricas grandes */
-
-  --weight-normal: 400;
-  --weight-medium: 500;
-  --weight-semibold: 600;
-  --weight-bold: 700;
-
-  --leading-tight: 1.2;
-  --leading-snug: 1.4;
-  --leading-normal: 1.6;
-
-  --tracking-tight: -0.02em;
-  --tracking-normal: 0em;
-  --tracking-wide: 0.04em;
-  --tracking-wider: 0.08em;    /* para labels en mayúsculas */
-
-  /* ─── BORDES Y RADIOS ────────────────────────────────── */
-  --radius-sm: 3px;      /* badges, chips pequeños */
-  --radius-md: 6px;      /* cards, inputs */
-  --radius-lg: 10px;     /* paneles principales */
-  --radius-full: 9999px; /* pills */
-
-  --border-width: 1px;
-  --border-width-strong: 1.5px;
-
-  /* ─── ELEVACIÓN (sombras) ──────────────────────────────
-     Las sombras comunican elevación — no son decorativas.
-     Usar azul oscuro, no negro puro (más natural en dark themes). */
-  --shadow-sm: 0 1px 3px rgba(4, 8, 16, 0.4);
-  --shadow-md: 0 4px 12px rgba(4, 8, 16, 0.5), 0 1px 3px rgba(4, 8, 16, 0.3);
-  --shadow-lg: 0 8px 24px rgba(4, 8, 16, 0.6), 0 2px 8px rgba(4, 8, 16, 0.4);
-  --shadow-cyan: 0 0 0 1px var(--cyan-border), 0 4px 16px rgba(56, 178, 204, 0.08);
-  --shadow-critical: 0 0 0 1px var(--critical-border), 0 4px 16px rgba(194, 59, 82, 0.1);
-
-  /* ─── TRANSICIONES ──────────────────────────────────── */
+  /* ─── TRANSICIONES — rápidas, sin resorte decorativo ─────── */
   --duration-instant: 80ms;
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --duration-slow: 350ms;
-
+  --duration-fast: 100ms;
+  --duration-normal: 180ms;
+  --duration-slow: 240ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* ─── LAYOUT ─────────────────────────────────────────── */
-  --nav-width: 220px;
-  --nav-width-collapsed: 56px;
-  --panel-width: 360px;
-  --header-height: 48px;
-  --status-bar-height: 28px;
-
-  /* ─── Z-INDEX ─────────────────────────────────────────── */
+  /* ─── Z-INDEX ───────────────────────────────────────────── */
   --z-base: 0;
   --z-raised: 10;
   --z-dropdown: 100;
@@ -171,26 +129,100 @@
   --z-overlay: 300;
   --z-modal: 400;
   --z-toast: 500;
+
+  /* ─── RISK / HERO — valores numéricos (gradiente legado) ─── */
+  --risk-0: var(--state-low);
+  --risk-25: var(--state-med);
+  --risk-50: var(--state-high);
+  --risk-75: var(--alert);
+  --risk-100: var(--alert-text);
+  --text-2xl: 24px;
+  --text-3xl: 28px;
+
+  /* ─── ÁREAS — sin arcoíris: variaciones frías sobre gris ─── */
+  --area-palette-0: #5a6d7e;
+  --area-palette-1: #4d6070;
+  --area-palette-2: #6a7a88;
+  --area-palette-3: #556572;
+  --area-palette-4: #627484;
+  --area-palette-5: #4a5866;
+  --area-palette-6: #5c6b78;
+  --area-palette-7: #536270;
+
+  /* ═══ COMPATIBILIDAD — nombres V3 anteriores ═════════════════ */
+  --base-void: var(--bg-00);
+  --base-deep: var(--bg-01);
+  --base-surface: var(--bg-03);
+  --base-raised: var(--bg-04);
+  --base-overlay: var(--bg-05);
+  --base-border: var(--border);
+  --base-border-strong: var(--border-strong);
+  --base-muted: var(--tx-03);
+  --base-subtle: var(--tx-02);
+  --base-soft: var(--tx-01);
+  --base-text: var(--tx-01);
+  --base-bright: var(--tx-00);
+
+  --cyan-base: var(--action);
+  --cyan-dim: var(--action-dim);
+  --cyan-border: var(--action-border);
+  --cyan-bright: var(--action-text);
+  --cyan-soft: color-mix(in srgb, var(--action) 55%, var(--tx-02));
+  --cyan-muted: var(--action-dim);
+  --cyan-glow: var(--action-text);
+
+  --critical-base: var(--alert);
+  --critical-bright: var(--alert-text);
+  --critical-muted: #8b3040;
+  --critical-bg: var(--alert-dim);
+  --critical-border: var(--alert-border);
+
+  --high-bright: var(--state-high);
+  --high-base: var(--state-high);
+  --high-muted: var(--state-med);
+  --high-border: var(--border-strong);
+  --high-bg: var(--bg-02);
+
+  --medium-bright: var(--state-high);
+  --medium-base: var(--state-med);
+  --medium-muted: var(--state-med);
+  --medium-border: var(--border-strong);
+  --medium-bg: var(--bg-02);
+
+  --clean-bright: var(--state-low);
+  --clean-base: var(--state-low);
+  --clean-muted: color-mix(in srgb, var(--state-low) 35%, var(--bg-03));
+  --clean-border: var(--border);
+  --clean-bg: var(--bg-02);
+
+  --info-bright: var(--tx-02);
+  --info-base: var(--tx-03);
+  --info-muted: var(--tx-03);
+  --info-border: var(--border);
+  --info-bg: var(--bg-02);
 }
 
-/* ─── SCROLLBAR PERSONALIZADA ────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
+/* ─── SCROLLBAR — casi invisible (F01) ─────────────────────── */
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 ::-webkit-scrollbar-thumb {
-  background: var(--base-border-strong);
-  border-radius: var(--radius-full);
+  background: var(--border-strong);
+  border-radius: 0;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--base-muted); }
 
-/* ─── SELECCIÓN DE TEXTO ─────────────────────────────────── */
+/* ─── SELECCIÓN ────────────────────────────────────────────── */
 ::selection {
-  background: var(--cyan-dim);
-  color: var(--cyan-glow);
+  background: var(--action-dim);
+  color: var(--action-text);
 }
 
-/* ─── FOCUS RING ──────────────────────────────────────────── */
+/* ─── FOCUS (sin radio en el outline; F01) ─────────────────── */
 :focus-visible {
-  outline: 1.5px solid var(--cyan-base);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
+  outline: 1px solid var(--action);
+  outline-offset: 1px;
 }

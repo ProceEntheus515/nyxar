@@ -5,6 +5,7 @@ from typing import Optional
 
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
+from collector.normalizer import Normalizer
 
 logger = get_logger("collector.parsers.dns_parser")
 
@@ -14,9 +15,10 @@ class DnsParser:
     Por cada línea nueva, parsea y publica en Redis Stream events:raw.
     """
 
-    def __init__(self, log_path: str, redis_bus: RedisBus):
+    def __init__(self, log_path: str, redis_bus: RedisBus, normalizer: Normalizer):
         self.log_path = log_path
         self.redis_bus = redis_bus
+        self.normalizer = normalizer
         self.position_key = "parser:dns:last_position"
         self._processed_count = 0
         self._lines_since_save = 0
@@ -174,11 +176,12 @@ class DnsParser:
                         
                         event_dict = self._parse_line(line)
                         if event_dict and self._is_valid_event(event_dict):
-                            # Preparar crudo y publicar a Redis
-                            # Incorporamos source="dns" para que cumpla el contrato de negocio en raw
-                            # Pero lo enviamos como dict { raw_log } que el Normalizer sepa leer
-                            payload = {"source": "dns", "raw": event_dict}
-                            await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, payload)
+                            evento = await self.normalizer.normalize(event_dict, "dns")
+                            if evento:
+                                await self.redis_bus.publish_event(
+                                    self.redis_bus.STREAM_RAW,
+                                    evento.to_redis_dict(),
+                                )
                             
                             self._processed_count += 1
                             self._lines_since_save += 1

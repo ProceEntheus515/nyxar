@@ -5,6 +5,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 
+from collector.normalizer import Normalizer
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
 
@@ -19,7 +20,8 @@ class TrafficGenerator:
     def __init__(self, personas: List[Dict[str, Any]], redis_bus: RedisBus):
         self.personas = personas
         self.redis_bus = redis_bus
-        
+        self._normalizer = Normalizer(redis_bus)
+
         self.lab_mode = os.getenv("LAB_MODE", "false").lower() == "true"
         self.time_multiplier = 5 if self.lab_mode else 1
         self.start_time_real = datetime.now(timezone.utc)
@@ -123,8 +125,11 @@ class TrafficGenerator:
             "blocked": force_blocked
         }
         
-        payload = {"source": "dns", "raw": event}
-        await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, payload)
+        evento = await self._normalizer.normalize(event, "dns")
+        if evento:
+            await self.redis_bus.publish_event(
+                self.redis_bus.STREAM_RAW, evento.to_redis_dict()
+            )
         
         self.events_last_minute += 1
         self.unique_domains_seen.add(dominio)
@@ -157,8 +162,11 @@ class TrafficGenerator:
             "destination_ip": "8.8.8.8" # Simulado genérico
         }
 
-        payload = {"source": "proxy", "raw": event}
-        await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, payload)
+        evento = await self._normalizer.normalize(event, "proxy")
+        if evento:
+            await self.redis_bus.publish_event(
+                self.redis_bus.STREAM_RAW, evento.to_redis_dict()
+            )
         self.events_last_minute += 1
 
     async def _generate_for_persona(self, persona: dict) -> None:

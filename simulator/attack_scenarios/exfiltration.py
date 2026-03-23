@@ -57,7 +57,7 @@ class ExfiltrationScenario(BaseAttackScenario):
                     "status": "NOERROR",
                     "blocked": False
                 }
-                await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "dns", "raw": dns_event})
+                await self._publish_normalized(dns_event, "dns")
                 
             proxy_event = {
                 "timestamp": f"{now.timestamp():.3f}",
@@ -69,7 +69,7 @@ class ExfiltrationScenario(BaseAttackScenario):
                 "destination_ip": "104.22.4.19", # Genérico para mega
                 "user_agent": user_agent_anomalo
             }
-            await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, {"source": "proxy", "raw": proxy_event})
+            await self._publish_normalized(proxy_event, "proxy")
             
             gap_simulado = (mins_duracion * 60) / chunks
             await asyncio.sleep(gap_simulado / self.time_multiplier)

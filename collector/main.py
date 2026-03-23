@@ -6,6 +6,8 @@ from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
 from shared.heartbeat import heartbeat_loop
+from ad_connector.resolver import IdentityResolver
+from collector.normalizer import Normalizer
 
 # Modulos
 from collector.parsers.dns_parser import DnsParser
@@ -21,18 +23,24 @@ async def main():
     await redis_bus.connect()
     mongo_client = MongoClient()
     await mongo_client.connect()
+    resolver = IdentityResolver(redis_bus, mongo_client)
+    normalizer = Normalizer(redis_bus, resolver=resolver)
     asyncio.create_task(heartbeat_loop(redis_bus, "collector"), name="collector-hb")
-    
+
     # Rutas por defecto del host, pueden venir de .env
     pihole_path = os.getenv("LOG_DNS_PATH", "/logs/dns/pihole.log")
     proxy_path = os.getenv("LOG_PROXY_PATH", "/logs/proxy/access.log")
     firewall_path = os.getenv("LOG_FIREWALL_PATH", "/logs/firewall/ufw.log")
     
-    # Instanciamos parsers
-    dns = DnsParser(log_path=pihole_path, redis_bus=redis_bus)
-    proxy = ProxyParser(log_path=proxy_path, redis_bus=redis_bus)
-    fw = FirewallParser(log_path=firewall_path, redis_bus=redis_bus)
-    wazuh = WazuhParser(redis_bus=redis_bus, mongo_client=mongo_client)
+    # Instanciamos parsers (publican Evento completo en events:raw, contrato I01)
+    dns = DnsParser(log_path=pihole_path, redis_bus=redis_bus, normalizer=normalizer)
+    proxy = ProxyParser(log_path=proxy_path, redis_bus=redis_bus, normalizer=normalizer)
+    fw = FirewallParser(log_path=firewall_path, redis_bus=redis_bus, normalizer=normalizer)
+    wazuh = WazuhParser(
+        redis_bus=redis_bus,
+        normalizer=normalizer,
+        mongo_client=mongo_client,
+    )
     
     # Manejo graceful shutdown
     loop = asyncio.get_event_loop()

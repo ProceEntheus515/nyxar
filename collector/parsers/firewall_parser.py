@@ -8,6 +8,7 @@ from io import StringIO
 
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
+from collector.normalizer import Normalizer
 
 logger = get_logger("collector.parsers.firewall")
 
@@ -17,9 +18,10 @@ class FirewallParser:
     Detecta automáticamente el formato.
     """
 
-    def __init__(self, log_path: str, redis_bus: RedisBus):
+    def __init__(self, log_path: str, redis_bus: RedisBus, normalizer: Normalizer):
         self.log_path = log_path
         self.redis_bus = redis_bus
+        self.normalizer = normalizer
         self.position_key = "parser:firewall:last_position"
         self._processed_count = 0
         self._lines_since_save = 0
@@ -132,8 +134,12 @@ class FirewallParser:
                             h_str = hashlib.md5(f"{event_dict['timestamp']}-{event_dict['src_ip']}-{event_dict['dst_ip']}-{event_dict['action']}-{event_dict['dst_port']}".encode()).hexdigest()
                             
                             if not await self._is_duplicate(h_str):
-                                payload = {"source": "firewall", "raw": event_dict}
-                                await self.redis_bus.publish_event(self.redis_bus.STREAM_RAW, payload)
+                                evento = await self.normalizer.normalize(event_dict, "firewall")
+                                if evento:
+                                    await self.redis_bus.publish_event(
+                                        self.redis_bus.STREAM_RAW,
+                                        evento.to_redis_dict(),
+                                    )
                                 
                                 self._processed_count += 1
                                 self._lines_since_save += 1

@@ -2573,7 +2573,7 @@ NO HAGAS:
 ---
 
 ### PROMPT V18 — DevOps Engineer
-**Rol:** 📡 DevOps Engineer  
+**Rol:** DevOps Engineer  
 **Componente:** Dashboard de observabilidad interno  
 **Entregable:** Vista de health en React + `observability/health.py`
 
@@ -2708,12 +2708,12 @@ NO HAGAS:
 
 ---
 
-## 🧪 TESTING DE MÓDULOS V2
+## TESTING DE MÓDULOS V2
 
 ---
 
 ### PROMPT V19 — QA Engineer
-**Rol:** 🧪 QA Engineer  
+**Rol:** QA Engineer  
 **Componente:** Tests de integración para módulos V2  
 **Entregable:** `tests/v2/` con cobertura de los nuevos módulos
 

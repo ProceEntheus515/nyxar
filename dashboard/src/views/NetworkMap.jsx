@@ -15,10 +15,72 @@ import {
   buildInternalLinksFromEvents,
   activeNodeIdsInWindow,
   internoNodeId,
-  nodeRadiusForScore,
+  resolveAlertNodeId,
 } from '../lib/networkMap/internalGraph'
+import { NetworkMapLensRenderer } from '../lib/networkMap/networkMapLensRenderer'
 
 const PARTICLE_MS = 600
+const PICK_RADIUS_WORLD = 18
+
+/** Borde claro fijo para leer el marcador sobre --bg-* y dentro del hueco de la lente. */
+const NODE_RIM = 'rgba(237, 243, 250, 0.5)'
+const INTERNAL_NODE_PX = 8
+const EXTERNAL_NODE_PX = 10
+
+function drawInternalNodeMarker(ctx, x, y, fill, lineWidth) {
+  const s = INTERNAL_NODE_PX
+  ctx.fillStyle = fill
+  ctx.globalAlpha = 1
+  ctx.fillRect(x - s / 2, y - s / 2, s, s)
+  ctx.strokeStyle = NODE_RIM
+  ctx.lineWidth = lineWidth
+  ctx.strokeRect(x - s / 2, y - s / 2, s, s)
+}
+
+function drawExternalNodeMarker(ctx, x, y, fill, lineWidth) {
+  const s = EXTERNAL_NODE_PX
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(Math.PI / 4)
+  ctx.fillStyle = fill
+  ctx.globalAlpha = 1
+  ctx.fillRect(-s / 2, -s / 2, s, s)
+  ctx.strokeStyle = NODE_RIM
+  ctx.lineWidth = lineWidth
+  ctx.strokeRect(-s / 2, -s / 2, s, s)
+  ctx.restore()
+}
+
+function isCriticalSeverity(sev) {
+  const s = String(sev || '').toLowerCase()
+  return s === 'critica' || s === 'crítica'
+}
+
+function resolveLensContext(selectedId, alerts, baseNodes, visibleNodeIds, pos) {
+  if (selectedId) {
+    for (const id of visibleNodeIds) {
+      const meta = baseNodes.get(id)
+      if (!meta) continue
+      if (
+        selectedId === id ||
+        selectedId === String(meta.identity?.ip_asociada || '')
+      ) {
+        const p = pos.get(id)
+        if (p) return { nid: id, meta, p, source: 'selection' }
+      }
+    }
+  }
+  const criticalInFeed = (alerts || []).find((a) => isCriticalSeverity(a.severidad))
+  if (criticalInFeed) {
+    const nid = resolveAlertNodeId(criticalInFeed, baseNodes)
+    if (nid && visibleNodeIds.has(nid)) {
+      const p = pos.get(nid)
+      const meta = baseNodes.get(nid)
+      if (p && meta) return { nid, meta, p, source: 'alert' }
+    }
+  }
+  return null
+}
 
 function canvasColorFromToken(token) {
   const t = String(token || '').trim()
@@ -84,10 +146,14 @@ export default function NetworkMap() {
   const rafRef = useRef(0)
   const drawFrameRef = useRef(() => {})
   const hoverRef = useRef({ nodeId: null, linkKey: null })
+  const lensRef = useRef(null)
+  const prevResolvedLensIdRef = useRef(null)
+  const lastCriticalPulseAlertIdRef = useRef(null)
 
   const {
     identities,
     events,
+    alerts,
     openDetailPanel,
     detailPanel,
     mapFocusNodeId,
@@ -322,6 +388,31 @@ export default function NetworkMap() {
     })
   }, [])
 
+  useEffect(() => {
+    if (selectedId) return
+    if (!lensRef.current) lensRef.current = new NetworkMapLensRenderer()
+    const criticalAlert = (alerts || []).find((a) => isCriticalSeverity(a.severidad))
+    if (!criticalAlert) return
+    const aid = criticalAlert.id
+    if (!aid || aid === lastCriticalPulseAlertIdRef.current) return
+    const nid = resolveAlertNodeId(criticalAlert, baseNodes)
+    if (!nid) return
+    const p = positionsRef.current.get(nid)
+    const meta = baseNodes.get(nid)
+    if (!p || !meta) return
+    lastCriticalPulseAlertIdRef.current = aid
+    const lens = lensRef.current
+    lens.setTargetMeta({
+      id: meta.id,
+      label: meta.nombre,
+      risk_score: meta.score,
+      graphKind: meta.graphKind,
+    })
+    lens.setWorldPos(p.x, p.y)
+    lens.pulseAlert()
+    requestRedraw()
+  }, [selectedId, alerts, baseNodes, identityKey, requestRedraw])
+
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current
     const container = containerRef.current
@@ -339,6 +430,10 @@ export default function NetworkMap() {
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+
+    if (!lensRef.current || !(lensRef.current instanceof NetworkMapLensRenderer)) {
+      lensRef.current = new NetworkMapLensRenderer()
+    }
 
     const t = transformRef.current
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -407,11 +502,9 @@ export default function NetworkMap() {
     }
     particlesRef.current = kept
 
-    const sortedIds = [...visibleNodeIds].sort((a, b) => {
-      const ra = baseNodes.get(a)?.radius || 8
-      const rb = baseNodes.get(b)?.radius || 8
-      return rb - ra
-    })
+    const sortedIds = [...visibleNodeIds].sort(
+      (a, b) => (baseNodes.get(b)?.score || 0) - (baseNodes.get(a)?.score || 0),
+    )
 
     for (const id of sortedIds) {
       const meta = baseNodes.get(id)
@@ -420,41 +513,78 @@ export default function NetworkMap() {
 
       const bucket = scoreToColor(meta.score)
       const fill = canvasColorFromToken(bucket.color)
-      const strokeBase = fill
-      const selected =
-        selectedId != null &&
-        (selectedId === id || selectedId === String(meta.identity?.ip_asociada || ''))
-      const r = nodeRadiusForScore(meta.score)
-
-      ctx.beginPath()
-      ctx.fillStyle = fill
-      ctx.globalAlpha = 0.85
-      ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.globalAlpha = 1
-
-      ctx.strokeStyle = selected ? canvasColorFromToken('var(--cyan-bright)') : strokeBase
-      ctx.lineWidth = selected ? 3 : 1.5
-      ctx.stroke()
+      const lineW = 1.25
+      const isExternal = meta.graphKind === 'external'
+      const outerGlow = isExternal ? EXTERNAL_NODE_PX + 4 : INTERNAL_NODE_PX + 4
 
       if (meta.score > 80) {
-        const pulse = 0.6 + Math.sin(pulseT * 1.4) * 0.25
-        ctx.beginPath()
+        const pulse = 0.65 + Math.sin(pulseT * 1.4) * 0.28
         ctx.strokeStyle = canvasColorFromToken('var(--critical-muted)')
-        ctx.globalAlpha = pulse * 0.85
+        ctx.globalAlpha = Math.min(1, pulse * 0.95)
         ctx.lineWidth = 2
-        ctx.arc(p.x, p.y, r + 3, 0, Math.PI * 2)
-        ctx.stroke()
+        if (isExternal) {
+          ctx.save()
+          ctx.translate(p.x, p.y)
+          ctx.rotate(Math.PI / 4)
+          ctx.strokeRect(-outerGlow / 2, -outerGlow / 2, outerGlow, outerGlow)
+          ctx.restore()
+        } else {
+          ctx.strokeRect(
+            p.x - outerGlow / 2,
+            p.y - outerGlow / 2,
+            outerGlow,
+            outerGlow,
+          )
+        }
         ctx.globalAlpha = 1
+      }
+
+      if (isExternal) {
+        drawExternalNodeMarker(ctx, p.x, p.y, fill, lineW)
+      } else {
+        drawInternalNodeMarker(ctx, p.x, p.y, fill, lineW)
       }
     }
 
     ctx.restore()
 
+    const lens = lensRef.current
+    const lensCtx = resolveLensContext(
+      selectedId,
+      alerts,
+      baseNodes,
+      visibleNodeIds,
+      pos,
+    )
+    const prevLensId = prevResolvedLensIdRef.current
+    if (lensCtx) {
+      lens.setTargetMeta({
+        id: lensCtx.meta.id,
+        label: lensCtx.meta.nombre,
+        risk_score: lensCtx.meta.score,
+        graphKind: lensCtx.meta.graphKind,
+      })
+      lens.setWorldPos(lensCtx.p.x, lensCtx.p.y)
+      if (prevLensId !== lensCtx.nid) {
+        prevResolvedLensIdRef.current = lensCtx.nid
+        if (lensCtx.source === 'selection') {
+          lens.activateLens()
+        }
+      }
+      lens.renderLens(ctx, { dpr, width: w, height: h, transform: t })
+    } else {
+      if (prevLensId != null) {
+        prevResolvedLensIdRef.current = null
+        lens.deactivateLens()
+      }
+      lens.renderLens(ctx, { dpr, width: w, height: h, transform: t })
+    }
+
     const needLoop =
       particlesRef.current.length > 0 ||
       visibleLinks.some((l) => l.level === 'malicious') ||
-      [...visibleNodeIds].some((id) => (baseNodes.get(id)?.score || 0) > 80)
+      [...visibleNodeIds].some((id) => (baseNodes.get(id)?.score || 0) > 80) ||
+      lens.shouldKeepAnimationLoop()
 
     if (needLoop) requestRedraw()
   }, [
@@ -465,6 +595,7 @@ export default function NetworkMap() {
     visibleNodeIds,
     showConnections,
     selectedId,
+    alerts,
     requestRedraw,
   ])
 
@@ -635,7 +766,7 @@ export default function NetworkMap() {
         const meta = baseNodes.get(id)
         const p = pos.get(id)
         if (!meta || !p) continue
-        const r = meta.radius + 6
+        const r = PICK_RADIUS_WORLD
         const d = Math.hypot(wx - p.x, wy - p.y)
         if (d <= r && d < best) {
           best = d

@@ -2,6 +2,9 @@ import { areaToClusterKey } from './clusterAnchors'
 
 const FIVE_MIN_MS = 5 * 60 * 1000
 
+/** Radio usado en simulación, pick bounds y zoom al nodo (nodos densos en canvas). */
+export const LAYOUT_NODE_RADIUS = 8
+
 /**
  * @param {number} score
  * @returns {number} radio en px (spec F09 mapa)
@@ -43,6 +46,31 @@ export function internoNodeId(ev) {
  * @param {Record<string, object>} identitiesMap
  * @returns {Map<string, object>}
  */
+function graphKindFromRow(row) {
+  const raw = String(row?.graph_kind || row?.tipo_grafo || '')
+    .trim()
+    .toLowerCase()
+  if (raw === 'external' || raw === 'externo') return 'external'
+  return 'internal'
+}
+
+/**
+ * @param {object} alert
+ * @param {Map<string, object>} baseNodes
+ * @returns {string | null}
+ */
+export function resolveAlertNodeId(alert, baseNodes) {
+  if (!alert || !(baseNodes instanceof Map)) return null
+  const raw = String(alert.identidad_id || alert.host_afectado || '').trim()
+  if (!raw) return null
+  if (baseNodes.has(raw)) return raw
+  for (const [id, meta] of baseNodes) {
+    const ip = String(meta?.identity?.ip_asociada || '')
+    if (ip && ip === raw) return id
+  }
+  return null
+}
+
 export function buildIdentityNodes(identitiesMap) {
   const out = new Map()
   for (const row of Object.values(identitiesMap || {})) {
@@ -51,13 +79,15 @@ export function buildIdentityNodes(identitiesMap) {
     const score = Number(row.risk_score) || 0
     const area = row.area || '—'
     const clusterKey = areaToClusterKey(area)
+    const graphKind = graphKindFromRow(row)
     out.set(id, {
       id,
       identity: row,
       area,
       clusterKey,
       score,
-      radius: nodeRadiusForScore(score),
+      radius: LAYOUT_NODE_RADIUS,
+      graphKind,
       nombre: row.nombre_completo || id,
     })
   }

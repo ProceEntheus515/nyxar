@@ -83,7 +83,7 @@ class Evento(BaseModel):
 
     def to_redis_dict(self) -> dict:
         """Serializa 100% JSON puro (datetimes a strings) para Redis streams/caché."""
-        data = self.model_dump(mode="json", exclude_none=True)
+        data = self.model_dump(mode="json", exclude_none=False)
         return data
 
     model_config = ConfigDict(

@@ -3,6 +3,7 @@ import { List, useListRef } from 'react-window'
 import MetricCard from '../components/data/MetricCard'
 import TimelineFilterBar from '../components/timeline/TimelineFilterBar'
 import TimelineFeedRow from '../components/timeline/TimelineFeedRow'
+import { TargetListHeader, TIMELINE_TARGET_COLUMNS } from '../components/data/TargetList'
 import { normalizeSourceKey } from '../lib/colors'
 import { useStore } from '../store'
 import styles from './Timeline.module.css'
@@ -69,6 +70,7 @@ export default function Timeline() {
 
   const listRef = useListRef()
   const feedWrapRef = useRef(null)
+  const listAnimRef = useRef(null)
   const [listHeight, setListHeight] = useState(480)
   const wasAtTopRef = useRef(true)
   const anchorHeadIdRef = useRef(null)
@@ -122,6 +124,7 @@ export default function Timeline() {
       selectedEventId,
       onEventSelect: handleEventSelect,
       compactFeed,
+      targetColumns: TIMELINE_TARGET_COLUMNS,
     }),
     [filteredEvents, selectedEventId, handleEventSelect, compactFeed],
   )
@@ -146,7 +149,7 @@ export default function Timeline() {
   const honeypotsToday = honeypotsTodayCount(alerts, events)
 
   useLayoutEffect(() => {
-    const el = feedWrapRef.current
+    const el = listAnimRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(() => {
       const h = el.clientHeight
@@ -261,7 +264,10 @@ export default function Timeline() {
           </button>
         ) : null}
 
+        <TargetListHeader columns={TIMELINE_TARGET_COLUMNS} className={styles.feedColumnHeader} />
+
         <div
+          ref={listAnimRef}
           key={`${filterFingerprint}-${rowPx}`}
           className={`${styles.listAnim} animate-fadeIn`.trim()}
         >

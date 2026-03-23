@@ -10,6 +10,19 @@ from observability.health import HealthChecker, compute_events_per_minute_series
 from shared.logger import get_logger
 from shared.redis_bus import RedisBus
 from shared.mongo_client import MongoClient
+from api.websocket_contract import (
+    AI_MEMO,
+    HEALTH_THROUGHPUT,
+    HEALTH_UPDATE,
+    HONEYPOT_HIT,
+    IDENTITY_UPDATE,
+    INITIAL_STATE,
+    NEW_ALERT,
+    NEW_EVENT,
+    NEW_EVENT_BATCH,
+    PONG,
+    STATS_UPDATE,
+)
 
 logger = get_logger("api.websocket")
 
@@ -52,11 +65,15 @@ async def connect(sid, environ):
         memos = [doc async for doc in cursor_ai]
         for m in memos: m.pop("_id", None)
             
-        await sio.emit("initial_state", {
-            "last_events": evs,
-            "risk_identities": idents,
-            "ai_memos": memos
-        }, room=sid)
+        await sio.emit(
+            INITIAL_STATE,
+            {
+                "last_events": evs,
+                "risk_identities": idents,
+                "ai_memos": memos,
+            },
+            room=sid,
+        )
         
     except Exception as e:
         logger.error(f"[WS] Fallo enviando payload inicial a {sid}: {e}")
@@ -69,11 +86,30 @@ async def disconnect(sid):
 @sio.event
 async def subscribe_identity(sid, data):
     # Cliente pide monitorear una identidad especifica
-    iden_id = data.get("identidad_id")
+    iden_id = (data or {}).get("identidad_id")
     if iden_id:
         room_name = f"identity:{iden_id}"
         await sio.enter_room(sid, room_name)
         logger.debug(f"[WS] Cliente {sid} suscrito a {room_name}")
+
+
+@sio.event
+async def unsubscribe_identity(sid, data):
+    iden_id = (data or {}).get("identidad_id")
+    if iden_id:
+        room_name = f"identity:{iden_id}"
+        await sio.leave_room(sid, room_name)
+        logger.debug("[WS] Cliente %s salió de %s", sid, room_name)
+
+
+@sio.event
+async def ping(sid, data):
+    await sio.emit(
+        PONG,
+        {"ok": True, "ts": datetime.now(timezone.utc).isoformat()},
+        room=sid,
+    )
+
 
 @sio.event
 async def request_ceo_view(sid, data):
@@ -93,7 +129,7 @@ async def request_ceo_view(sid, data):
             "generado_por": "Claude 3.5 Sonnet (CEO Report)",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await sio.emit("ai_memo", memo_fake, room=sid)
+        await sio.emit(AI_MEMO, memo_fake, room=sid)
     except Exception as e:
         logger.error(f"[WS] Fallo generando ceo view manual: {e}")
 
@@ -113,14 +149,14 @@ async def event_dispatcher_loop():
                     # Dividimos en chunks si excede 20 para agrupar 
                     chunks = [batch[i:i+20] for i in range(0, len(batch), 20)]
                     for chunk in chunks:
-                        await sio.emit("new_event_batch", {"events": chunk})
+                        await sio.emit(NEW_EVENT_BATCH, {"events": chunk})
                 else:
                     evento = batch[0]
-                    await sio.emit("new_event", evento)
+                    await sio.emit(NEW_EVENT, evento)
                     # Si toca room especifico
                     ip = evento["interno"].get("ip") if "interno" in evento else None
                     if ip:
-                        await sio.emit("new_event", evento, room=f"identity:{ip}")
+                        await sio.emit(NEW_EVENT, evento, room=f"identity:{ip}")
                         
                 batch.clear()
                 
@@ -137,7 +173,7 @@ async def identity_updater_loop():
                 updates = list(identity_updates.values())
                 identity_updates.clear()
                 for upd in updates:
-                    await sio.emit("identity_update", upd)
+                    await sio.emit(IDENTITY_UPDATE, upd)
             await asyncio.sleep(1.0)
         except Exception as e:
             pass
@@ -152,11 +188,14 @@ async def stats_loop():
             activas = await db.identities.count_documents({"last_seen": {"$gte": (datetime.now(timezone.utc) - timedelta(hours=24))}})
             abiertas = await db.incidents.count_documents({"estado": {"$nin": ["cerrado", "falso_positivo"]}})
             
-            await sio.emit("stats_update", {
-                "eventos_por_min": eventos_min,
-                "identidades_activas": activas,
-                "alertas_abiertas": abiertas
-            })
+            await sio.emit(
+                STATS_UPDATE,
+                {
+                    "eventos_por_min": eventos_min,
+                    "identidades_activas": activas,
+                    "alertas_abiertas": abiertas,
+                },
+            )
         except Exception:
             pass
         await asyncio.sleep(30.0)
@@ -172,7 +211,7 @@ async def health_broadcast_loop():
                 await redis_bus.connect()
             checker = HealthChecker(redis_bus, mongo_client)
             report = await checker.full_check()
-            await sio.emit("health_update", report.model_dump(mode="json"))
+            await sio.emit(HEALTH_UPDATE, report.model_dump(mode="json"))
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -187,7 +226,7 @@ async def health_throughput_loop():
             if mongo_client.db is None:
                 await mongo_client.connect()
             pts = await compute_events_per_minute_series(mongo_client, 120)
-            await sio.emit("health_throughput", {"points": pts})
+            await sio.emit(HEALTH_THROUGHPUT, {"points": pts})
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -207,6 +246,7 @@ async def redis_listener():
     pubsub = r.pubsub()
     channels = [
         "dashboard:events",
+        "dashboard:alerts",
         "channel:ai_updates",
         "alerts",
         "notifications:urgent",
@@ -231,21 +271,30 @@ async def redis_listener():
                         await event_queue.put(payload)
                     elif evt_type == "new_alert":
                          # Prioridad: va directo
-                         await sio.emit("new_alert", payload)
+                         await sio.emit(NEW_ALERT, payload)
                     elif evt_type == "honeypot_hit":
-                         await sio.emit("honeypot_hit", payload)
+                         await sio.emit(HONEYPOT_HIT, payload)
                     elif evt_type == "identity_update":
                          identity_updates[payload["identidad_id"]] = payload
                          
                 elif chan == "channel:ai_updates":
-                    await sio.emit("ai_memo", data)
+                    await sio.emit(AI_MEMO, data)
                     
+                elif chan == "dashboard:alerts":
+                    # I03: correlator publica { tipo: new_incident, data: incidente }
+                    if data.get("tipo") == "new_incident":
+                        await sio.emit(NEW_ALERT, data.get("data", data))
+                    elif data.get("tipo") == "test":
+                        pass
+                    else:
+                        await sio.emit(NEW_ALERT, data)
+
                 elif chan in ("alerts", "notifications:urgent"):
                     # Mappeo legado de RedisBus publish_alert + canal urgente SOAR
                     if "honeypot_name" in data or data.get("patron") == "TRAMPILLA_HONEYPOT":
-                        await sio.emit("honeypot_hit", data)
+                        await sio.emit(HONEYPOT_HIT, data)
                     else:
-                        await sio.emit("new_alert", data)
+                        await sio.emit(NEW_ALERT, data)
                         
             except Exception as e:
                  logger.error(f"[WS] Error parseando Redis PubSub: {e} | {msg['data']}")

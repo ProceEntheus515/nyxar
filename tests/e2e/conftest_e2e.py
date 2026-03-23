@@ -156,12 +156,26 @@ async def clean_state(full_stack):
 # ---------------------------------------------------------------------------
 
 async def publish_raw_event(redis_url: str, event: dict) -> None:
-    """Publica un evento raw al stream events:raw como lo haría el collector."""
+    """Publica en events:raw con el mismo envelope que RedisBus.publish_event (campo data JSON)."""
     import json
-    r = aioredis.from_url(redis_url)
-    flat = {k: json.dumps(v) if isinstance(v, (dict, list)) else str(v)
-            for k, v in event.items()}
-    await r.xadd("events:raw", flat)
+
+    from api.models import Evento
+
+    allowed = (
+        "id",
+        "timestamp",
+        "source",
+        "tipo",
+        "interno",
+        "externo",
+        "enrichment",
+        "risk_score",
+        "correlaciones",
+    )
+    payload = {k: event[k] for k in allowed if k in event}
+    evento = Evento(**payload)
+    r = aioredis.from_url(redis_url, decode_responses=True)
+    await r.xadd("events:raw", {"data": json.dumps(evento.to_redis_dict())})
     await r.aclose()
 
 

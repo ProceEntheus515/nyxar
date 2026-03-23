@@ -6,7 +6,8 @@ def parser(mocker=None):
     """DnsParser sin RedisBus real — pasamos un mock básico."""
     from unittest.mock import AsyncMock
     mock_redis = AsyncMock()
-    return DnsParser(log_path="/dev/null", redis_bus=mock_redis)
+    mock_normalizer = AsyncMock()
+    return DnsParser(log_path="/dev/null", redis_bus=mock_redis, normalizer=mock_normalizer)
 
 def test_parse_line_query_a(parser):
     line = "Oct 19 14:15:22 dnsmasq[1234]: query[A] example.com from 192.168.1.50"

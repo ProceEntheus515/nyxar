@@ -2,25 +2,42 @@ import { useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { useStore } from '../store';
 
-const SOCKET_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
+/**
+ * URL del servidor Socket.IO (misma API FastAPI).
+ * Debe coincidir con api/websocket_contract.py (eventos SERVER_EVENTS / CLIENT_EVENTS).
+ */
+const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
 
 export function useWebSocket() {
-  const { 
-    addEvent, addEventBatch, addAlert, updateIdentity, 
-    addAiMemo, updateStats, setInitialState,
-    setHealthReport, setHealthThroughput,
+  const {
+    addEvent,
+    addEventBatch,
+    addAlert,
+    addHoneypotHit,
+    addAiMemo,
+    addProposal,
+    updateIdentity,
+    updateStats,
+    setInitialState,
+    setHealthReport,
+    setHealthThroughput,
     setWsConnected,
   } = useStore();
 
   useEffect(() => {
-    const socket = io(SOCKET_URL, {
-      reconnectionDelayMax: 10000,
+    const socket = io(WS_URL, {
       reconnection: true,
-      transports: ['websocket', 'polling']
+      reconnectionDelay: 1000,
+      reconnectionAttempts: Infinity,
+      transports: ['websocket', 'polling'],
     });
 
     socket.on('connect', () => {
       setWsConnected(true);
+    });
+
+    socket.on('disconnect', () => {
+      setWsConnected(false);
     });
 
     socket.on('initial_state', (payload) => {
@@ -32,7 +49,7 @@ export function useWebSocket() {
     });
 
     socket.on('new_event_batch', (payload) => {
-      if (payload.events) {
+      if (payload?.events) {
         addEventBatch(payload.events);
       }
     });
@@ -42,7 +59,7 @@ export function useWebSocket() {
     });
 
     socket.on('honeypot_hit', (hit) => {
-      addAlert(hit);
+      addHoneypotHit(hit);
     });
 
     socket.on('identity_update', (update) => {
@@ -65,12 +82,15 @@ export function useWebSocket() {
       setHealthThroughput(payload?.points);
     });
 
-    socket.on('disconnect', () => {
-      setWsConnected(false);
+    socket.on('response_proposal', () => {
+      addProposal();
     });
 
+    socket.on('pong', () => {});
+
     return () => {
+      socket.removeAllListeners();
       socket.disconnect();
     };
-  }, []); // Run exclusively on mount
+  }, []);
 }
