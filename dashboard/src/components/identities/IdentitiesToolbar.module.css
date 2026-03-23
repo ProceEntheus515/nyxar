@@ -1,0 +1,66 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.searchWrap {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.search {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--base-border-strong);
+  background: var(--base-overlay);
+  color: var(--base-text);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  outline: none;
+  transition: border-color var(--duration-fast);
+}
+
+.search::placeholder {
+  color: var(--base-muted);
+}
+
+.search:focus-visible {
+  border-color: var(--cyan-border);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--base-border-strong);
+  background: var(--base-overlay);
+  color: var(--base-subtle);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast),
+    color var(--duration-fast),
+    background var(--duration-fast);
+}
+
+.toggle:hover {
+  color: var(--base-text);
+  border-color: var(--cyan-border);
+}
+
+.toggleOn {
+  color: var(--clean-bright);
+  border-color: var(--clean-border);
+  background: color-mix(in srgb, var(--clean-bg) 28%, var(--base-overlay));
+}
+
+.toggleDot {
+  font-size: var(--text-xs);
+  opacity: 0.9;
+}

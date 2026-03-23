@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { huntingApi } from '../api/client'
 import { useStore } from '../store'
-import { flattenHuntResultRows } from '../lib/huntingUtils'
+import { extractIdentityIdsFromHuntSession, flattenHuntResultRows } from '../lib/huntingUtils'
 import { HypothesisListItem } from '../components/hunting/HypothesisListItem'
 import { ManualHypothesisModal } from '../components/hunting/ManualHypothesisModal'
 import { SessionQueriesSection } from '../components/hunting/SessionQueriesSection'
@@ -11,6 +11,7 @@ import styles from './HuntingView.module.css'
 
 export default function HuntingView({ onNavigate }) {
   const setTimelineFocusEventId = useStore((s) => s.setTimelineFocusEventId)
+  const setHuntingSessionIdentityIds = useStore((s) => s.setHuntingSessionIdentityIds)
 
   const [hypotheses, setHypotheses] = useState([])
   const [sessions, setSessions] = useState([])
@@ -43,6 +44,19 @@ export default function HuntingView({ onNavigate }) {
   useEffect(() => {
     refreshLists()
   }, [refreshLists])
+
+  useEffect(() => {
+    if (!activeSession) {
+      setHuntingSessionIdentityIds([])
+      return
+    }
+    setHuntingSessionIdentityIds(extractIdentityIdsFromHuntSession(activeSession))
+  }, [activeSession, setHuntingSessionIdentityIds])
+
+  useEffect(
+    () => () => setHuntingSessionIdentityIds([]),
+    [setHuntingSessionIdentityIds],
+  )
 
   const displayHypothesis = useMemo(() => {
     if (activeSession?.hypothesis) return activeSession.hypothesis

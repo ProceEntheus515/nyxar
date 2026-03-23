@@ -119,9 +119,17 @@ export default function RiskDistributionDots({
     )
   }
 
+  const chartH = Math.max(1, Math.round(Number(height) || 200))
+
   return (
-    <div className={`${styles.wrap} ${className}`.trim()} style={{ width: '100%', height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div className={`${styles.wrap} ${className}`.trim()} style={{ width: '100%', height: chartH }}>
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+        minWidth={0}
+        minHeight={chartH}
+        initialDimension={{ width: 400, height: chartH }}
+      >
         <ScatterChart margin={{ top: 12, right: 12, bottom: 28, left: 8 }}>
           <XAxis
             type="number"

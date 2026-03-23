@@ -81,9 +81,17 @@ export default function EventsPerHourBar({ data = [], height = 120, className = 
     return s.startsWith('#') && s.length === 7 ? `${s}40` : 'rgba(17,22,32,0.2)'
   }, [])
 
+  const barH = Math.max(1, Math.round(Number(height) || 120))
+
   return (
-    <div className={`${styles.wrap} ${className}`.trim()} style={{ width: '100%', height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div className={`${styles.wrap} ${className}`.trim()} style={{ width: '100%', height: barH }}>
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+        minWidth={0}
+        minHeight={barH}
+        initialDimension={{ width: 480, height: barH }}
+      >
         <BarChart
           data={chartData}
           margin={{ top: 8, right: 8, left: 4, bottom: 28 }}

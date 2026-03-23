@@ -68,6 +68,20 @@
   text-overflow: ellipsis;
 }
 
+.huntBadge {
+  flex-shrink: 0;
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cyan-bright);
+  border: 1px solid var(--cyan-border);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  line-height: 1.2;
+}
+
 .priv {
   flex-shrink: 0;
   font-size: var(--text-xs);
@@ -103,6 +117,13 @@
 
 .activityOff {
   background: var(--base-muted);
+}
+
+.spark {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .area {

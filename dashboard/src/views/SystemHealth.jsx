@@ -110,7 +110,13 @@ export default function SystemHealth() {
       <div className={styles.chartWrap}>
         <h3 className={styles.chartTitle}>Eventos por minuto (últimas 2 h)</h3>
         <div className={styles.chartInner}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            minWidth={0}
+            minHeight={220}
+            initialDimension={{ width: 640, height: 280 }}
+          >
           <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="var(--base-border)" strokeDasharray="3 3" />
             <XAxis dataKey="t" tick={{ fill: 'var(--base-subtle)', fontSize: 10 }} />

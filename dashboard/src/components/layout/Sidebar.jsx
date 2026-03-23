@@ -5,6 +5,8 @@ import { NyxarLogo } from './NyxarLogo'
 import { AboutNyxar } from './AboutNyxar'
 import SidebarNavItem from './SidebarNavItem'
 import SidebarHealthDot from './SidebarHealthDot'
+import LabSimulatorDock from './LabSimulatorDock'
+import { isDevDataEnabled } from '../../lib/devData'
 import styles from './Sidebar.module.css'
 
 function countOpenIncidents(incidents) {
@@ -44,9 +46,12 @@ export function Sidebar({ isNarrowViewport }) {
   const healthGeneral = useStore((s) => s.healthGeneral)
   const healthReport = useStore((s) => s.healthReport)
   const wsConnected = useStore((s) => s.wsConnected)
+  const isLabMode = useStore((s) => s.isLabMode)
+  const identities = useStore((s) => s.identities)
 
   const effectiveCollapsed = Boolean(isNarrowViewport || sidebarCollapsed)
   const showCollapseToggle = !isNarrowViewport
+  const labSimulatorVisible = isLabMode || isDevDataEnabled
 
   const timelineBadge = useMemo(() => countOpenIncidents(incidents), [incidents])
   const dotVariant = healthDotVariant(wsConnected, healthGeneral)
@@ -108,6 +113,10 @@ export function Sidebar({ isNarrowViewport }) {
 
         <div className={styles.footer}>
           <hr className={styles.sep} />
+
+          {labSimulatorVisible ? (
+            <LabSimulatorDock collapsed={effectiveCollapsed} identities={identities} />
+          ) : null}
 
           <NavLink
             to="/health"

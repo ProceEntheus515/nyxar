@@ -27,6 +27,33 @@ export function pickEventId(doc) {
   return doc.id || null
 }
 
+/**
+ * IPs / usuarios internos únicos presentes en la muestra de una sesión de hunting.
+ * Alineado con claves de identidades en Zustand (interno.ip, etc.).
+ *
+ * @param {{ detalle_queries?: { muestra?: object[] }[] }} session
+ * @returns {string[]}
+ */
+export function extractIdentityIdsFromHuntSession(session) {
+  const out = new Set()
+  const dq = session?.detalle_queries
+  if (!Array.isArray(dq)) return []
+  for (const q of dq) {
+    for (const doc of q.muestra || []) {
+      if (!doc || typeof doc !== 'object') continue
+      const interno = doc.interno || {}
+      const id =
+        interno.ip ||
+        interno.ip_asociada ||
+        interno.id_usuario ||
+        interno.usuario ||
+        doc.identidad_id
+      if (id != null && String(id).trim()) out.add(String(id).trim())
+    }
+  }
+  return [...out]
+}
+
 export function summarizeHuntDoc(doc) {
   if (!doc || typeof doc !== 'object') {
     return { timestamp: '', identidad: '', valor: '', contexto: '' }

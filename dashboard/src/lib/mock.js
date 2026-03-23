@@ -86,6 +86,51 @@ const EXTERNO_POOL = [
 
 const SOURCES_ROT = ['firewall', 'dns', 'proxy', 'wazuh', 'misp', 'firewall', 'dns']
 
+const BASELINE_DOMAIN_POOL = [
+  'microsoft.com',
+  'office.com',
+  'google.com',
+  'slack.com',
+  'zoom.us',
+  'github.com',
+  'atlassian.net',
+  'salesforce.com',
+  'adobe.com',
+  'okta.com',
+  'docusign.com',
+  'dropbox.com',
+]
+
+/**
+ * Baseline sintético por identidad (Zustand); la vista calcula desviaciones vs eventos en cliente.
+ *
+ * @param {{ id: string }[]} identities
+ * @returns {Record<string, object>}
+ */
+export function buildIdentityBaselinesForMock(identities) {
+  const out = {}
+  for (let i = 0; i < identities.length; i += 1) {
+    const id = identities[i].id
+    if (!id) continue
+    const startH = 8 + (i % 2)
+    const startM = i % 3 === 0 ? 30 : 0
+    const habitualStartMinutes = startH * 60 + startM
+    const habitualEndMinutes = 18 * 60
+    const nKnown = 5 + (i % 4)
+    const known = []
+    for (let k = 0; k < nKnown; k += 1) {
+      known.push(BASELINE_DOMAIN_POOL[(i + k * 3) % BASELINE_DOMAIN_POOL.length])
+    }
+    out[String(id)] = {
+      habitual_start_minutes: habitualStartMinutes,
+      habitual_end_minutes: habitualEndMinutes,
+      baseline_volume_mb: 60 + (i % 6) * 5 + (i % 4) * 2,
+      known_domains: known,
+    }
+  }
+  return out
+}
+
 function buildMockIdentities() {
   return MOCK_IDENTITY_BLUEPRINT.map((row, i) => {
     const [nombre_completo, area, risk_score, delta_2h, dispositivo, hostname, es_privilegiado] = row
@@ -172,6 +217,11 @@ function buildMockHealthThroughput(points = 36) {
  */
 export function buildDevMockInitialState() {
   const risk_identities = buildMockIdentities()
+  const identity_baselines = buildIdentityBaselinesForMock(risk_identities)
+  const hunting_identity_ids = [
+    risk_identities[0]?.id,
+    risk_identities[4]?.id,
+  ].filter(Boolean)
   const last_events = buildMockEventSeries(risk_identities, 140)
 
   const highEventIds = last_events
@@ -268,6 +318,8 @@ export function buildDevMockInitialState() {
   return {
     last_events,
     risk_identities,
+    identity_baselines,
+    hunting_identity_ids,
     ai_memos,
     stats: {
       eventos_por_min: 38,

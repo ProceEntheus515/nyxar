@@ -1,5 +1,6 @@
 import { useStore } from '../../store'
 import EventDetailContent from '../timeline/EventDetailContent'
+import IdentityDetailContent from '../identities/IdentityDetailContent'
 import styles from './DetailPanel.module.css'
 
 const TYPE_LABEL = {
@@ -34,6 +35,8 @@ export default function DetailPanel({ wideLayout }) {
         <div className={styles.body}>
           {type === 'event' && id != null ? (
             <EventDetailContent eventId={id} />
+          ) : type === 'identity' && id != null ? (
+            <IdentityDetailContent identityId={id} />
           ) : (
             <>
               <p className={styles.placeholder}>

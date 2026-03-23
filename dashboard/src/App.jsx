@@ -12,7 +12,6 @@ const NetworkMap = React.lazy(() => import('./views/NetworkMap'))
 const Timeline = React.lazy(() => import('./views/Timeline'))
 const Identities = React.lazy(() => import('./views/Identities'))
 const HuntingView = React.lazy(() => import('./views/HuntingView'))
-const AttackInjector = React.lazy(() => import('./views/AttackInjector'))
 const SystemHealth = React.lazy(() => import('./views/SystemHealth'))
 const RoutePlaceholder = React.lazy(() => import('./views/RoutePlaceholder'))
 
@@ -34,7 +33,7 @@ function HuntingViewRoute() {
 }
 
 function AppRoutes() {
-  const { isLabMode, identities, setInitialState } = useStore()
+  const { setInitialState } = useStore()
 
   useEffect(() => {
     if (isDevDataEnabled) setInitialState(buildDevMockInitialState())
@@ -80,10 +79,6 @@ function AppRoutes() {
             />
           </Route>
         </Routes>
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <AttackInjector isLabMode={isLabMode || isDevDataEnabled} identities={identities} />
       </Suspense>
     </>
   )

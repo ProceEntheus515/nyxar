@@ -1,4 +1,5 @@
 import { areaToColor, scoreToColor } from '../../lib/colors'
+import { isIdentityActiveLast30m } from '../../lib/identityBehavior'
 import { isDevDataEnabled } from '../../lib/devData'
 import {
   makeRiskSparkline24h,
@@ -17,13 +18,6 @@ function initials(nombre) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
-/** Activo si última actividad en los últimos 30 min (misma heurística que la vista previa). */
-function isActiveNow(lastSeenISO) {
-  if (!lastSeenISO) return false
-  const diffMin = (Date.now() - new Date(lastSeenISO).getTime()) / 60000
-  return diffMin < 30
-}
-
 function trendArrow(delta) {
   if (delta == null || Number.isNaN(Number(delta))) return null
   const d = Number(delta)
@@ -40,6 +34,7 @@ export default function IdentityRow({
   onClick,
   compact = false,
   selected = false,
+  inHunting = false,
   className = '',
 }) {
   if (!identity) return null
@@ -47,7 +42,7 @@ export default function IdentityRow({
   const area = identity.area || '—'
   const bg = areaToColor(area)
   const ini = initials(identity.nombre_completo)
-  const active = isActiveNow(identity.last_seen_ts)
+  const active = isIdentityActiveLast30m(identity.last_seen_ts)
   const score = Number(identity.risk_score) || 0
   const bucket = scoreToColor(score)
   const delta = identity.delta_2h
@@ -87,6 +82,11 @@ export default function IdentityRow({
       <div className={styles.main}>
         <div className={styles.nameLine}>
           <span className={styles.name}>{identity.nombre_completo || 'Sin nombre'}</span>
+          {inHunting ? (
+            <span className={styles.huntBadge} title="En investigación hunting activa">
+              ◈ EN HUNTING
+            </span>
+          ) : null}
           {privileged ? (
             <span className={styles.priv} aria-label="Cuenta privilegiada" title="Privilegiado">
               ◆

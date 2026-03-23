@@ -33,6 +33,15 @@ export const useStore = create((set) => ({
    * NetworkMap hace zoom al nodo y luego limpia el valor.
    */
   mapFocusNodeId: null,
+  /** Mapa id identidad → perfil de baseline (horarios, volumen base, dominios conocidos). */
+  identityBaselines: {},
+  /**
+   * Seed de identidades marcadas para hunting (mock / payload inicial).
+   * En UI se une con `huntingSessionIdentityIds`.
+   */
+  huntingIdentityIds: [],
+  /** Identidades inferidas de la sesión de hunting abierta en el dashboard (transitorio). */
+  huntingSessionIdentityIds: [],
   sidebarCollapsed: readSidebarCollapsed(),
   /** Propuestas de respuesta pendientes (badge en sidebar; WebSocket en futuras iteraciones). */
   responseProposalsPending: 0,
@@ -43,6 +52,11 @@ export const useStore = create((set) => ({
     set({ mapFocusNodeId: nodeId != null && String(nodeId).trim() ? String(nodeId).trim() : null }),
 
   clearMapFocusRequest: () => set({ mapFocusNodeId: null }),
+
+  setHuntingSessionIdentityIds: (ids) =>
+    set({
+      huntingSessionIdentityIds: Array.isArray(ids) ? ids.map((x) => String(x).trim()).filter(Boolean) : [],
+    }),
 
   setResponseProposalsPending: (n) =>
     set({ responseProposalsPending: Math.max(0, Number(n) || 0) }),
@@ -124,6 +138,8 @@ export const useStore = create((set) => ({
         incidents: incidentsList,
         health_report,
         health_throughput,
+        identity_baselines,
+        hunting_identity_ids,
       } = payload
 
       const idsMap = (risk_identities || []).reduce(
@@ -152,6 +168,12 @@ export const useStore = create((set) => ({
       }
       if (Array.isArray(health_throughput)) {
         next.healthThroughput = health_throughput
+      }
+      if (identity_baselines != null && typeof identity_baselines === 'object') {
+        next.identityBaselines = { ...state.identityBaselines, ...identity_baselines }
+      }
+      if (Array.isArray(hunting_identity_ids)) {
+        next.huntingIdentityIds = hunting_identity_ids.map(String)
       }
 
       return next
