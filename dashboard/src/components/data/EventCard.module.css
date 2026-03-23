@@ -1,0 +1,115 @@
+.card {
+  --event-border-color: var(--base-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: var(--border-width) solid var(--base-border);
+  border-left-width: 2px;
+  border-left-color: var(--event-border-color);
+  background: var(--base-surface);
+  text-align: left;
+  cursor: default;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    border-left-width var(--duration-instant) linear;
+}
+
+.card[role='button'] {
+  cursor: pointer;
+}
+
+.card[role='button']:hover {
+  background: var(--base-raised);
+  box-shadow: var(--shadow-sm);
+}
+
+.selected {
+  border-left-width: 3px;
+  background: color-mix(in srgb, var(--base-raised) 70%, var(--base-surface));
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+
+.source {
+  flex-shrink: 0;
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+
+.user {
+  font-family: var(--font-data);
+  font-size: var(--text-sm);
+  color: var(--base-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+
+.dot {
+  color: var(--base-muted);
+  flex-shrink: 0;
+}
+
+.areaBadge {
+  flex-shrink: 0;
+}
+
+.time {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.main {
+  min-width: 0;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--base-border);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.context {
+  font-family: var(--font-data);
+  font-size: var(--text-xs);
+  color: var(--base-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.compact .header {
+  border-bottom: none;
+}
+
+.compactMain {
+  min-width: 0;
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--base-border);
+}
+
+.compact .time {
+  margin-left: auto;
+}

@@ -6,11 +6,12 @@ import { readCssVar } from '../styles/cssVar';
 import Card from '../components/ui/Card';
 import RiskBadge from '../components/ui/RiskBadge';
 import MonoText from '../components/ui/MonoText';
+import MetricCard from '../components/data/MetricCard';
 
 export default function NetworkMap() {
   const svgRef = useRef(null);
   const measureRef = useRef(null);
-  const { identities, events, alerts } = useStore();
+  const { identities, events, alerts, openDetailPanel } = useStore();
   const [selectedNode, setSelectedNode] = useState(null);
   const [chartSize, setChartSize] = useState({ width: 0, height: 0 });
 
@@ -85,6 +86,13 @@ export default function NetworkMap() {
       nodeStroke,
     };
   }, [identities, events, alerts]);
+
+  const recentEvents5m = useMemo(() => {
+    const now = Date.now();
+    return (events || []).filter(
+      (ev) => now - new Date(ev.timestamp).getTime() <= 5 * 60 * 1000,
+    ).length;
+  }, [events]);
 
   useEffect(() => {
     const el = measureRef.current;
@@ -242,6 +250,12 @@ export default function NetworkMap() {
         Internal Topology & Connections
       </h2>
 
+      <div className="mb-3 grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-3">
+        <MetricCard label="Nodos en grafo" value={graphData.nodes.length} />
+        <MetricCard label="Aristas activas" value={graphData.links.length} />
+        <MetricCard label="Eventos (5 min)" value={recentEvents5m} />
+      </div>
+
       <div
         ref={measureRef}
         className="relative min-h-[min(60vh,520px)] w-full flex-1 overflow-hidden rounded-lg border border-[var(--border-default)] bg-[var(--base-deep)]"
@@ -287,8 +301,15 @@ export default function NetworkMap() {
                </div>
              </div>
              
-             <button className="w-full mt-4 py-2 border border-[var(--base-border)] text-white rounded text-sm hover:bg-[var(--border-default)] transition-colors">
-               Abrir Reporte Completo
+             <button
+               type="button"
+               className="w-full mt-4 py-2 border border-[var(--base-border)] text-white rounded text-sm hover:bg-[var(--border-default)] transition-colors"
+               onClick={() => {
+                 const id = selectedNode?.id ?? selectedNode?.ip_asociada
+                 if (id != null) openDetailPanel('identity', id)
+               }}
+             >
+               Abrir en panel de detalle
              </button>
            </div>
         </Card>
