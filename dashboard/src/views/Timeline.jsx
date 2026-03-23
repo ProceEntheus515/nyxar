@@ -1,78 +1,104 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { List, useListRef } from 'react-window'
-import EventCard from '../components/data/EventCard'
-import IncidentCard from '../components/data/IncidentCard'
 import MetricCard from '../components/data/MetricCard'
+import TimelineFilterBar from '../components/timeline/TimelineFilterBar'
+import TimelineFeedRow from '../components/timeline/TimelineFeedRow'
+import { normalizeSourceKey } from '../lib/colors'
 import { useStore } from '../store'
+import styles from './Timeline.module.css'
 
-function timelineRowHeight(index, { filteredEvents, alerts }) {
-  const e = filteredEvents[index]
-  if (!e) return 140
-  const isIncident = alerts.some((al) => al.evento_original_id === e.id)
-  return isIncident ? 252 : 138
+function startOfLocalDayMs(now = Date.now()) {
+  const d = new Date(now)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
 }
 
-function TimelineRow({
-  index,
-  style,
-  ariaAttributes,
-  filteredEvents,
-  alerts,
-  selectedEventId,
-  onEventSelect,
-}) {
-  const e = filteredEvents[index]
-  if (!e) return null
+function countEventsInRange(events, startMs, endMs) {
+  let n = 0
+  for (const e of events || []) {
+    const t = new Date(e.timestamp).getTime()
+    if (Number.isFinite(t) && t >= startMs && t < endMs) n += 1
+  }
+  return n
+}
 
-  const isIncident = alerts.some((al) => al.evento_original_id === e.id)
-  const incidentData = alerts.find((al) => al.evento_original_id === e.id)
-  const incidentMerged = isIncident
-    ? {
-        ...incidentData,
-        interno: e.interno,
-        timestamp: incidentData?.timestamp || e.timestamp,
-      }
-    : null
+function countEventsSince(events, sinceMs) {
+  let n = 0
+  for (const e of events || []) {
+    const t = new Date(e.timestamp).getTime()
+    if (Number.isFinite(t) && t >= sinceMs) n += 1
+  }
+  return n
+}
 
-  const selected = selectedEventId != null && String(selectedEventId) === String(e.id)
-
-  return (
-    <div style={{ ...style, paddingBottom: '8px' }} {...ariaAttributes}>
-      <div className="flex flex-col gap-2 h-full min-h-0">
-        <EventCard
-          event={e}
-          selected={selected}
-          onClick={() => onEventSelect?.(e)}
-        />
-        {isIncident && incidentMerged ? (
-          <IncidentCard incident={incidentMerged} expandable={false} />
-        ) : null}
-      </div>
-    </div>
-  )
+function honeypotsTodayCount(alerts, events) {
+  const day = startOfLocalDayMs()
+  let n = 0
+  for (const a of alerts || []) {
+    if (!String(a.tipo || '').toLowerCase().includes('honey')) continue
+    const t = new Date(a.timestamp).getTime()
+    if (Number.isFinite(t) && t >= day) n += 1
+  }
+  for (const e of events || []) {
+    if (!String(e.source || '').toLowerCase().includes('honey')) continue
+    const t = new Date(e.timestamp).getTime()
+    if (Number.isFinite(t) && t >= day) n += 1
+  }
+  return n
 }
 
 export default function Timeline() {
   const {
     events,
     alerts,
+    incidents,
+    stats,
     timelineFocusEventId,
     setTimelineFocusEventId,
     detailPanel,
     openDetailPanel,
     closeDetailPanel,
   } = useStore()
+
   const [filterSource, setFilterSource] = useState('')
-  const [isScrolled, setIsScrolled] = useState(false)
+  const [filterMinRisk, setFilterMinRisk] = useState(0)
+  const [filterArea, setFilterArea] = useState('')
+  const [soloAlertas, setSoloAlertas] = useState(false)
+  const [feedDensity, setFeedDensity] = useState('compact')
+  const [pendingNew, setPendingNew] = useState(0)
+
   const listRef = useListRef()
+  const feedWrapRef = useRef(null)
+  const [listHeight, setListHeight] = useState(480)
+  const wasAtTopRef = useRef(true)
+  const anchorHeadIdRef = useRef(null)
+
+  const rowPx = feedDensity === 'compact' ? 76 : 120
+  const compactFeed = feedDensity === 'compact'
+
+  const alertEventIds = useMemo(
+    () => new Set((alerts || []).map((a) => a.evento_original_id).filter(Boolean)),
+    [alerts],
+  )
 
   const filteredEvents = useMemo(() => {
     let evts = events || []
     if (filterSource) {
-      evts = evts.filter((e) => e.source?.toLowerCase().includes(filterSource))
+      evts = evts.filter((e) => normalizeSourceKey(e.source) === filterSource)
+    }
+    if (filterMinRisk > 0) {
+      evts = evts.filter((e) => Number(e.enrichment?.risk_score || 0) >= filterMinRisk)
+    }
+    if (filterArea) {
+      evts = evts.filter((e) => (e.interno?.area || '') === filterArea)
+    }
+    if (soloAlertas) {
+      evts = evts.filter((e) => alertEventIds.has(e.id))
     }
     return evts
-  }, [events, filterSource])
+  }, [events, filterSource, filterMinRisk, filterArea, soloAlertas, alertEventIds])
+
+  const filterFingerprint = `${filterSource}|${filterMinRisk}|${filterArea}|${soloAlertas}`
 
   const selectedEventId =
     detailPanel.isOpen && detailPanel.type === 'event' ? detailPanel.id : null
@@ -90,20 +116,46 @@ export default function Timeline() {
     [detailPanel, openDetailPanel, closeDetailPanel],
   )
 
-  const linkedAlertsCount = useMemo(() => {
-    const ids = new Set((filteredEvents || []).map((e) => e.id))
-    return (alerts || []).filter((a) => ids.has(a.evento_original_id)).length
-  }, [filteredEvents, alerts])
-
   const rowProps = useMemo(
     () => ({
       filteredEvents,
-      alerts,
       selectedEventId,
       onEventSelect: handleEventSelect,
+      compactFeed,
     }),
-    [filteredEvents, alerts, selectedEventId, handleEventSelect],
+    [filteredEvents, selectedEventId, handleEventSelect, compactFeed],
   )
+
+  const now = Date.now()
+  const todayStart = startOfLocalDayMs(now)
+  const yesterdayStart = todayStart - 86400000
+  const eventsToday = countEventsInRange(events, todayStart, now + 1)
+  const eventsYesterday = countEventsInRange(events, yesterdayStart, todayStart)
+  const deltaDay = eventsToday - eventsYesterday
+
+  const oneMinAgo = now - 60000
+  const eventsPerMin = countEventsSince(events, oneMinAgo)
+
+  const openIncidents = (incidents || []).filter(
+    (i) => String(i.estado || '').toLowerCase() === 'abierto',
+  ).length
+  const openAlertsCount = Number.isFinite(Number(stats?.alertas_abiertas))
+    ? Number(stats.alertas_abiertas)
+    : openIncidents + (alerts || []).length
+
+  const honeypotsToday = honeypotsTodayCount(alerts, events)
+
+  useLayoutEffect(() => {
+    const el = feedWrapRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      const h = el.clientHeight
+      setListHeight(Math.max(200, Math.floor(h)))
+    })
+    ro.observe(el)
+    setListHeight(Math.max(200, Math.floor(el.clientHeight)))
+    return () => ro.disconnect()
+  }, [])
 
   useEffect(() => {
     if (!timelineFocusEventId || !filteredEvents.length) return
@@ -114,60 +166,115 @@ export default function Timeline() {
     setTimelineFocusEventId(null)
   }, [timelineFocusEventId, filteredEvents, setTimelineFocusEventId, listRef])
 
-  const handleRowsRendered = useCallback((visible) => {
-    setIsScrolled(visible.startIndex > 0)
-  }, [])
+  const onRowsRendered = useCallback(
+    ({ startIndex }) => {
+      if (startIndex === 0) {
+        wasAtTopRef.current = true
+        anchorHeadIdRef.current = null
+        setPendingNew(0)
+        return
+      }
+      if (wasAtTopRef.current && startIndex > 0) {
+        anchorHeadIdRef.current = events[0]?.id ?? null
+        wasAtTopRef.current = false
+      }
+    },
+    [events],
+  )
 
-  const scrollToTop = () => {
-    listRef.current?.scrollToRow({ index: 0, behavior: 'instant' })
-    setIsScrolled(false)
-  }
+  useEffect(() => {
+    const head = events[0]?.id
+    if (head == null || anchorHeadIdRef.current == null) return
+    if (head === anchorHeadIdRef.current) return
+    const idx = events.findIndex((e) => e.id === anchorHeadIdRef.current)
+    const n = idx === -1 ? Math.min(500, events.length) : idx
+    setPendingNew(n)
+  }, [events])
+
+  const scrollToTopSmooth = useCallback(() => {
+    listRef.current?.scrollToRow({ index: 0, align: 'start', behavior: 'smooth' })
+    anchorHeadIdRef.current = null
+    setPendingNew(0)
+    wasAtTopRef.current = true
+  }, [listRef])
 
   return (
-    <div className="h-full flex flex-col relative w-full h-[calc(100vh-100px)]">
-      <div className="mb-4 flex flex-shrink-0 flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-xl font-semibold text-white">Live Event Timeline</h2>
-          <select
-            value={filterSource}
-            onChange={(ev) => setFilterSource(ev.target.value)}
-            className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded p-2 text-sm text-white outline-none"
-          >
-            <option value="">Todas las Fuentes</option>
-            <option value="dns">DNS</option>
-            <option value="proxy">Proxy</option>
-            <option value="firewall">Firewall</option>
-            <option value="wazuh">Wazuh</option>
-            <option value="misp">MISP</option>
-          </select>
+    <div className={styles.page}>
+      <div className={styles.headerBlock}>
+        <div className={styles.titleRow}>
+          <h2 className={styles.title}>Live Event Timeline</h2>
+          <div className={styles.densityToggle} role="group" aria-label="Densidad del feed">
+            <button
+              type="button"
+              className={`${styles.densityBtn} ${feedDensity === 'compact' ? styles.densityBtnActive : ''}`.trim()}
+              onClick={() => setFeedDensity('compact')}
+            >
+              Compacto
+            </button>
+            <button
+              type="button"
+              className={`${styles.densityBtn} ${feedDensity === 'expanded' ? styles.densityBtnActive : ''}`.trim()}
+              onClick={() => setFeedDensity('expanded')}
+            >
+              Expandido
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <MetricCard label="Eventos en vista" value={filteredEvents.length} />
-          <MetricCard label="Buffer total" value={(events || []).length} />
-          <MetricCard label="Alertas vinculadas" value={linkedAlertsCount} />
+
+        <div className={styles.metrics}>
+          <MetricCard
+            label="Eventos hoy"
+            value={eventsToday}
+            delta={deltaDay}
+            trend
+          />
+          <MetricCard label="Eventos/min ahora" value={eventsPerMin} />
+          <MetricCard
+            label="Alertas abiertas"
+            value={openAlertsCount}
+            className={openAlertsCount > 0 ? styles.metricAlertsOpen : ''}
+          />
+          <MetricCard
+            label="Honeypots activados hoy"
+            value={honeypotsToday}
+            className={honeypotsToday > 0 ? styles.metricHoneypotHot : ''}
+          />
         </div>
+
+        <TimelineFilterBar
+          events={events}
+          filterSource={filterSource}
+          onSourceChange={setFilterSource}
+          filterMinRisk={filterMinRisk}
+          onMinRiskChange={setFilterMinRisk}
+          filterArea={filterArea}
+          onAreaChange={setFilterArea}
+          soloAlertas={soloAlertas}
+          onSoloAlertasChange={setSoloAlertas}
+        />
       </div>
 
-      {isScrolled && (
-        <button
-          type="button"
-          onClick={scrollToTop}
-          className="absolute top-16 left-1/2 -translate-x-1/2 z-10 bg-[var(--color-primary)] text-black px-4 py-1.5 rounded-full font-bold text-xs shadow-lg shadow-[var(--color-primary)]/20 animate-slide-in-right"
-        >
-          Volver arriba
-        </button>
-      )}
+      <div className={styles.feedWrap} ref={feedWrapRef}>
+        {pendingNew > 0 ? (
+          <button type="button" className={styles.badgeNew} onClick={scrollToTopSmooth}>
+            ▲ {pendingNew} nuevo{pendingNew === 1 ? '' : 's'}
+          </button>
+        ) : null}
 
-      <div className="flex-1 w-full relative">
-        <List
-          listRef={listRef}
-          rowCount={filteredEvents.length}
-          rowHeight={timelineRowHeight}
-          rowComponent={TimelineRow}
-          rowProps={rowProps}
-          onRowsRendered={handleRowsRendered}
-          style={{ height: 800, width: '100%' }}
-        />
+        <div
+          key={`${filterFingerprint}-${rowPx}`}
+          className={`${styles.listAnim} animate-fadeIn`.trim()}
+        >
+          <List
+            listRef={listRef}
+            rowCount={filteredEvents.length}
+            rowHeight={rowPx}
+            rowComponent={TimelineFeedRow}
+            rowProps={rowProps}
+            onRowsRendered={onRowsRendered}
+            style={{ height: listHeight, width: '100%' }}
+          />
+        </div>
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 .row {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 12px minmax(5rem, 8rem) minmax(6.5rem, auto);
+  grid-template-columns: 32px minmax(0, 1fr) 12px minmax(5rem, 8rem) 88px minmax(6.5rem, auto);
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
@@ -155,6 +155,10 @@
   .row {
     grid-template-columns: 32px minmax(0, 1fr) auto;
     grid-template-rows: auto auto;
+  }
+
+  .spark {
+    display: none;
   }
 
   .activity {

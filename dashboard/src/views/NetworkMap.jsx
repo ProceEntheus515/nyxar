@@ -1,248 +1,740 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import * as d3 from 'd3';
-import { useStore } from '../store';
-import { scoreToSeverity, RISK_COLORS } from '../lib/utils';
-import { readCssVar } from '../styles/cssVar';
-import Card from '../components/ui/Card';
-import RiskBadge from '../components/ui/RiskBadge';
-import MonoText from '../components/ui/MonoText';
-import MetricCard from '../components/data/MetricCard';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import * as d3 from 'd3'
+import { useStore } from '../store'
+import { scoreToColor } from '../lib/colors'
+import { readCssVar } from '../styles/cssVar'
+import MetricCard from '../components/data/MetricCard'
+import NetworkMapToolbar from '../components/network-map/NetworkMapToolbar'
+import {
+  clusterPixelCenter,
+  clusterLabel,
+  allClusterKeys,
+} from '../lib/networkMap/clusterAnchors'
+import {
+  buildIdentityNodes,
+  buildInternalLinksFromEvents,
+  activeNodeIdsInWindow,
+  internoNodeId,
+  nodeRadiusForScore,
+} from '../lib/networkMap/internalGraph'
+
+const PARTICLE_MS = 600
+
+function canvasColorFromToken(token) {
+  const t = String(token || '').trim()
+  const m = /^var\(\s*(--[^)]+)\s*\)/.exec(t)
+  if (m) {
+    const v = readCssVar(m[1])
+    return v || '#6b7fa0'
+  }
+  if (t.startsWith('#')) return t
+  const v = readCssVar(t)
+  return v || '#6b7fa0'
+}
+
+function quadControl(x1, y1, x2, y2, sign) {
+  const mx = (x1 + x2) / 2
+  const my = (y1 + y2) / 2
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const len = Math.hypot(dx, dy) || 1
+  const k = sign * 36
+  return { cx: mx + (-dy / len) * k, cy: my + (dx / len) * k }
+}
+
+function quadPoint(x0, y0, cx, cy, x1, y1, t) {
+  const u = 1 - t
+  return {
+    x: u * u * x0 + 2 * u * t * cx + t * t * x1,
+    y: u * u * y0 + 2 * u * t * cy + t * t * y1,
+  }
+}
+
+/** Distancia mínima punto–segmento cuadrático (muestreo). */
+function distToQuad(px, py, x0, y0, cx, cy, x1, y1, steps = 24) {
+  let min = Infinity
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps
+    const p = quadPoint(x0, y0, cx, cy, x1, y1, t)
+    const d = Math.hypot(px - p.x, py - p.y)
+    if (d < min) min = d
+  }
+  return min
+}
+
+function linkStrokeColors() {
+  const border = canvasColorFromToken('var(--base-border)')
+  const medium = canvasColorFromToken('var(--medium-muted)')
+  const critical = canvasColorFromToken('var(--critical-muted)')
+  return { border, medium, critical }
+}
 
 export default function NetworkMap() {
-  const svgRef = useRef(null);
-  const measureRef = useRef(null);
-  const { identities, events, alerts, openDetailPanel } = useStore();
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [chartSize, setChartSize] = useState({ width: 0, height: 0 });
+  const containerRef = useRef(null)
+  const canvasRef = useRef(null)
+  const svgLabelsRef = useRef(null)
+  const svgLabelsGRef = useRef(null)
+  const zoomBehaviorRef = useRef(null)
+  const transformRef = useRef(d3.zoomIdentity)
+  const positionsRef = useRef(new Map())
+  const layoutSizeRef = useRef({ w: 0, h: 0 })
+  const identityLayoutKeyRef = useRef('')
+  const particlesRef = useRef([])
+  const lastHeadEventIdRef = useRef(null)
+  const rafRef = useRef(0)
+  const drawFrameRef = useRef(() => {})
+  const hoverRef = useRef({ nodeId: null, linkKey: null })
 
-  // Computar Grafo Unificado (Identidades Locales + Nube/Destinos Activos últimos 5m)
-  const graphData = useMemo(() => {
-    const nodesMap = new Map();
-    const linksMap = new Map();
-    const now = Date.now();
-    const fallbackMuted = readCssVar('--base-subtle') || 'var(--base-subtle)';
-    const externalFill = readCssVar('--base-border-strong') || 'var(--base-border-strong)';
-    const nodeStroke = readCssVar('--base-deep') || 'var(--base-deep)';
+  const {
+    identities,
+    events,
+    openDetailPanel,
+    detailPanel,
+    mapFocusNodeId,
+    clearMapFocusRequest,
+  } = useStore()
 
-    // Nodos Base (Identidades de la empresa)
-    Object.values(identities || {}).forEach(id => {
-      nodesMap.set(id.id || id.ip_asociada, {
-        id: id.id || id.ip_asociada,
-        type: 'identity',
-        data: id,
-        radius: Math.max(15, (id.risk_score || 0) / 2 + 10),
-        color: RISK_COLORS[scoreToSeverity(id.risk_score || 0)]?.bg || fallbackMuted,
-      });
-    });
+  const [chartSize, setChartSize] = useState({ width: 0, height: 0 })
+  const [hoverTip, setHoverTip] = useState(null)
+  const [showConnections, setShowConnections] = useState(true)
+  const [minSeverityRaw, setMinSeverityRaw] = useState(0)
+  const [activeOnly, setActiveOnly] = useState(false)
 
-    // Validar eventos de últimos 5 minutos
-    (events || []).slice(0, 300).forEach(ev => {
-      const evtTs = new Date(ev.timestamp).getTime();
-      if (now - evtTs > 5 * 60 * 1000) return; // Fuera ventana 5 min
-      if (!ev.interno || !ev.externo) return;
+  const setMinSeverity = useCallback((n) => {
+    const v = Math.max(0, Math.min(99, Number(n) || 0))
+    setMinSeverityRaw(v)
+  }, [])
 
-      const srcId = ev.interno.id_usuario || ev.interno.ip;
-      const dstId = ev.externo.valor;
+  const minSeverityClamped = Math.min(99, minSeverityRaw)
 
-      // Generar Nodo Destino si no existe (External internet / IPs)
-      if (!nodesMap.has(dstId)) {
-        nodesMap.set(dstId, {
-          id: dstId,
-          type: 'external',
-          data: { label: dstId },
-          radius: 8,
-          color: externalFill,
-        });
-      }
+  const identityKey = useMemo(
+    () =>
+      Object.keys(identities || {})
+        .sort()
+        .join('\u0001'),
+    [identities],
+  )
 
-      // Link aggregation weight
-      const linkId = `${srcId}-${dstId}`;
-      const isIncident = alerts?.some(al => al.host_afectado === srcId && JSON.stringify(al).includes(dstId));
-      
-      if (!linksMap.has(linkId)) {
-        linksMap.set(linkId, {
-          source: srcId,
-          target: dstId,
-          value: 1,
-          isIncident: isIncident,
-          color: isIncident ? 'var(--color-critical)' : 'var(--color-primary)'
-        });
-      } else {
-        const link = linksMap.get(linkId);
-        link.value += 1;
-        if (isIncident) {
-             link.isIncident = true;
-             link.color = 'var(--color-critical)';
-        }
-      }
-    });
+  const baseNodes = useMemo(() => buildIdentityNodes(identities || {}), [identities])
 
-    // Solo conservar nodos que tienen conexión o son identidades puras
-    const validLinks = Array.from(linksMap.values()).filter(l => nodesMap.has(l.source) && nodesMap.has(l.target));
-    
-    return {
-      nodes: Array.from(nodesMap.values()),
-      links: validLinks,
-      nodeStroke,
-    };
-  }, [identities, events, alerts]);
+  const validIds = useMemo(() => new Set(baseNodes.keys()), [baseNodes])
+
+  const activeIds = useMemo(
+    () => activeNodeIdsInWindow(events || [], validIds),
+    [events, validIds],
+  )
+
+  const internalLinks = useMemo(
+    () => buildInternalLinksFromEvents(events || [], validIds),
+    [events, validIds],
+  )
+
+  const visibleNodeIds = useMemo(() => {
+    const out = new Set()
+    for (const [id, meta] of baseNodes) {
+      if ((meta.score || 0) < minSeverityClamped) continue
+      if (activeOnly && !activeIds.has(id)) continue
+      out.add(id)
+    }
+    return out
+  }, [baseNodes, minSeverityClamped, activeOnly, activeIds])
+
+  const visibleLinks = useMemo(
+    () =>
+      internalLinks.filter(
+        (l) => visibleNodeIds.has(l.source) && visibleNodeIds.has(l.target),
+      ),
+    [internalLinks, visibleNodeIds],
+  )
+
+  const degreeById = useMemo(() => {
+    const m = new Map()
+    for (const l of visibleLinks) {
+      m.set(l.source, (m.get(l.source) || 0) + 1)
+      m.set(l.target, (m.get(l.target) || 0) + 1)
+    }
+    return m
+  }, [visibleLinks])
 
   const recentEvents5m = useMemo(() => {
-    const now = Date.now();
-    return (events || []).filter(
-      (ev) => now - new Date(ev.timestamp).getTime() <= 5 * 60 * 1000,
-    ).length;
-  }, [events]);
+    const now = Date.now()
+    return (events || []).filter((ev) => {
+      try {
+        return now - new Date(ev.timestamp).getTime() <= 5 * 60 * 1000
+      } catch {
+        return false
+      }
+    }).length
+  }, [events])
+
+  const selectedId =
+    detailPanel?.isOpen && detailPanel?.type === 'identity' && detailPanel?.id != null
+      ? String(detailPanel.id)
+      : null
 
   useEffect(() => {
-    const el = measureRef.current;
-    if (!el) return undefined;
+    const el = containerRef.current
+    if (!el) return undefined
     const measure = () => {
-      const w = el.clientWidth;
-      const h = el.clientHeight;
-      setChartSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
-    };
-    measure();
-    if (typeof ResizeObserver !== 'undefined') {
-      const ro = new ResizeObserver(measure);
-      ro.observe(el);
-      return () => ro.disconnect();
+      const w = el.clientWidth
+      const h = el.clientHeight
+      setChartSize((prev) =>
+        prev.width === w && prev.height === h ? prev : { width: w, height: h },
+      )
     }
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  /** Layout por cluster: simulación local, posiciones fijas después. */
+  useEffect(() => {
+    const w = chartSize.width
+    const h = chartSize.height
+    if (w < 48 || h < 48 || baseNodes.size === 0) return
+
+    const prevW = layoutSizeRef.current.w
+    const prevH = layoutSizeRef.current.h
+    const sameIds = identityLayoutKeyRef.current === identityKey
+
+    if (sameIds && prevW > 0 && prevH > 0 && (prevW !== w || prevH !== h)) {
+      const map = positionsRef.current
+      const sx = w / prevW
+      const sy = h / prevH
+      for (const p of map.values()) {
+        p.x *= sx
+        p.y *= sy
+      }
+      layoutSizeRef.current = { w, h }
+      return
+    }
+
+    identityLayoutKeyRef.current = identityKey
+    layoutSizeRef.current = { w, h }
+
+    const centers = {}
+    for (const key of allClusterKeys()) {
+      centers[key] = clusterPixelCenter(key, w, h)
+    }
+
+    const simNodes = []
+    for (const meta of baseNodes.values()) {
+      const c = centers[meta.clusterKey] || centers.OTROS
+      const jitter = 48
+      simNodes.push({
+        id: meta.id,
+        clusterKey: meta.clusterKey,
+        radius: meta.radius,
+        x: c.cx + (Math.random() - 0.5) * jitter,
+        y: c.cy + (Math.random() - 0.5) * jitter,
+      })
+    }
+
+    const simulation = d3
+      .forceSimulation(simNodes)
+      .force(
+        'fx',
+        d3
+          .forceX((d) => centers[d.clusterKey]?.cx ?? w * 0.5)
+          .strength(0.18),
+      )
+      .force(
+        'fy',
+        d3
+          .forceY((d) => centers[d.clusterKey]?.cy ?? h * 0.5)
+          .strength(0.18),
+      )
+      .force(
+        'collide',
+        d3.forceCollide((d) => d.radius + 6).strength(0.95),
+      )
+      .alphaDecay(0.22)
+      .stop()
+
+    for (let i = 0; i < 400; i += 1) simulation.tick()
+
+    const pad = 24
+    const map = new Map()
+    for (const d of simNodes) {
+      const r = (baseNodes.get(d.id)?.radius || 12) + pad
+      map.set(d.id, {
+        x: Math.max(r, Math.min(w - r, d.x)),
+        y: Math.max(r, Math.min(h - r, d.y)),
+      })
+    }
+    positionsRef.current = map
+  }, [identityKey, chartSize.width, chartSize.height, baseNodes])
+
+  /** Partícula al llegar evento nuevo por WebSocket (cadena interna). */
+  useEffect(() => {
+    const list = events || []
+    if (list.length < 2) return
+    const head = list[0]
+    const prev = list[1]
+    if (!head?.id || head.id === lastHeadEventIdRef.current) return
+    lastHeadEventIdRef.current = head.id
+
+    const a = internoNodeId(prev)
+    const b = internoNodeId(head)
+    if (!a || !b || a === b) return
+    const pos = positionsRef.current
+    if (!pos.has(a) || !pos.has(b)) return
+
+    try {
+      if (Date.now() - new Date(head.timestamp).getTime() > 5 * 60 * 1000) return
+    } catch {
+      return
+    }
+
+    const pa = pos.get(a)
+    const pb = pos.get(b)
+    const sign = (a.charCodeAt(0) + b.charCodeAt(0)) % 2 === 0 ? 1 : -1
+    const { cx, cy } = quadControl(pa.x, pa.y, pb.x, pb.y, sign)
+    const enr = head.enrichment || {}
+    const level =
+      Number(enr.risk_score) >= 85 || enr.malicioso
+        ? 'malicious'
+        : enr.sospechoso
+          ? 'suspicious'
+          : 'normal'
+    const { border, medium, critical } = linkStrokeColors()
+    const color =
+      level === 'malicious' ? critical : level === 'suspicious' ? medium : border
+
+    particlesRef.current.push({
+      x0: pa.x,
+      y0: pa.y,
+      cx,
+      cy,
+      x1: pb.x,
+      y1: pb.y,
+      t0: Date.now(),
+      color,
+    })
+  }, [events])
+
+  const requestRedraw = useCallback(() => {
+    if (rafRef.current) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0
+      drawFrameRef.current()
+    })
+  }, [])
+
+  const drawFrame = useCallback(() => {
+    const canvas = canvasRef.current
+    const container = containerRef.current
+    if (!canvas || !container) return
+
+    const w = chartSize.width
+    const h = chartSize.height
+    if (w < 48 || h < 48) return
+
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+    canvas.width = Math.floor(w * dpr)
+    canvas.height = Math.floor(h * dpr)
+    canvas.style.width = `${w}px`
+    canvas.style.height = `${h}px`
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const t = transformRef.current
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, w, h)
+
+    ctx.save()
+    ctx.translate(t.x, t.y)
+    ctx.scale(t.k, t.k)
+
+    const pos = positionsRef.current
+    const palette = linkStrokeColors()
+    const now = performance.now()
+    const pulseT = now * 0.002
+
+    const linkGeoms = []
+
+    if (showConnections) {
+      visibleLinks.forEach((link, i) => {
+        const p0 = pos.get(link.source)
+        const p1 = pos.get(link.target)
+        if (!p0 || !p1) return
+        const sign = i % 2 === 0 ? 1 : -1
+        const { cx, cy } = quadControl(p0.x, p0.y, p1.x, p1.y, sign)
+        linkGeoms.push({ link, p0, p1, cx, cy })
+
+        let stroke = palette.border
+        let opacity = 0.4
+        if (link.level === 'suspicious') {
+          stroke = palette.medium
+          opacity = 0.65
+        }
+        if (link.level === 'malicious') {
+          stroke = palette.critical
+          opacity = 0.4 + Math.sin(pulseT) * 0.2 + 0.2
+        }
+
+        ctx.beginPath()
+        ctx.moveTo(p0.x, p0.y)
+        ctx.quadraticCurveTo(cx, cy, p1.x, p1.y)
+        ctx.strokeStyle = stroke
+        ctx.globalAlpha = opacity
+        ctx.lineWidth = 1 + Math.min(2, link.volume * 0.15)
+        ctx.stroke()
+        ctx.globalAlpha = 1
+      })
+    }
+
+    ;(hoverRef.current._linkGeoms = linkGeoms)
+
+    const particles = particlesRef.current
+    const kept = []
+    const wallNow = Date.now()
+    for (const p of particles) {
+      const wall = wallNow - p.t0
+      const u = Math.min(1, wall / PARTICLE_MS)
+      if (u >= 1) continue
+      const pt = quadPoint(p.x0, p.y0, p.cx, p.cy, p.x1, p.y1, u)
+      ctx.beginPath()
+      ctx.fillStyle = p.color
+      ctx.globalAlpha = 0.95
+      const pr = 2 / (t.k || 1)
+      ctx.arc(pt.x, pt.y, pr, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.globalAlpha = 1
+      kept.push(p)
+    }
+    particlesRef.current = kept
+
+    const sortedIds = [...visibleNodeIds].sort((a, b) => {
+      const ra = baseNodes.get(a)?.radius || 8
+      const rb = baseNodes.get(b)?.radius || 8
+      return rb - ra
+    })
+
+    for (const id of sortedIds) {
+      const meta = baseNodes.get(id)
+      const p = pos.get(id)
+      if (!meta || !p) continue
+
+      const bucket = scoreToColor(meta.score)
+      const fill = canvasColorFromToken(bucket.color)
+      const strokeBase = fill
+      const selected =
+        selectedId != null &&
+        (selectedId === id || selectedId === String(meta.identity?.ip_asociada || ''))
+      const r = nodeRadiusForScore(meta.score)
+
+      ctx.beginPath()
+      ctx.fillStyle = fill
+      ctx.globalAlpha = 0.85
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.globalAlpha = 1
+
+      ctx.strokeStyle = selected ? canvasColorFromToken('var(--cyan-bright)') : strokeBase
+      ctx.lineWidth = selected ? 3 : 1.5
+      ctx.stroke()
+
+      if (meta.score > 80) {
+        const pulse = 0.6 + Math.sin(pulseT * 1.4) * 0.25
+        ctx.beginPath()
+        ctx.strokeStyle = canvasColorFromToken('var(--critical-muted)')
+        ctx.globalAlpha = pulse * 0.85
+        ctx.lineWidth = 2
+        ctx.arc(p.x, p.y, r + 3, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.globalAlpha = 1
+      }
+    }
+
+    ctx.restore()
+
+    const needLoop =
+      particlesRef.current.length > 0 ||
+      visibleLinks.some((l) => l.level === 'malicious') ||
+      [...visibleNodeIds].some((id) => (baseNodes.get(id)?.score || 0) > 80)
+
+    if (needLoop) requestRedraw()
+  }, [
+    chartSize.width,
+    chartSize.height,
+    baseNodes,
+    visibleLinks,
+    visibleNodeIds,
+    showConnections,
+    selectedId,
+    requestRedraw,
+  ])
+
+  drawFrameRef.current = drawFrame
 
   useEffect(() => {
-    const width = chartSize.width;
-    const height = chartSize.height;
-    if (!svgRef.current || width < 48 || height < 48) return;
+    requestRedraw()
+  }, [
+    requestRedraw,
+    chartSize.width,
+    chartSize.height,
+    internalLinks,
+    visibleNodeIds,
+    showConnections,
+    selectedId,
+    minSeverityClamped,
+    activeOnly,
+  ])
 
-    const svg = d3.select(svgRef.current)
-      .attr('width', width)
-      .attr('height', height)
-      .attr('viewBox', [0, 0, width, height]);
+  useEffect(() => {
+    const svg = svgLabelsRef.current
+    const container = containerRef.current
+    if (!svg || !container) return undefined
 
-    svg.selectAll('*').remove();
+    const w = chartSize.width
+    const h = chartSize.height
+    if (w < 48 || h < 48) return undefined
 
-    const g = svg.append('g');
+    d3.select(svg).selectAll('*').remove()
+    const root = d3
+      .select(svg)
+      .append('g')
+      .attr('class', 'network-map-zoom-root')
+      .attr('transform', transformRef.current.toString())
 
-    svg.call(d3.zoom().on('zoom', (event) => {
-      g.attr('transform', event.transform);
-    }));
+    svgLabelsGRef.current = root.node()
 
-    const nodes = graphData.nodes.map(d => ({ ...d }));
-    const links = graphData.links.map(d => ({ ...d }));
-    const strokeColor = graphData.nodeStroke || readCssVar('--base-deep');
+    const g = root.append('g').attr('class', 'cluster-labels')
 
-    const cx = width / 2;
-    const cy = height / 2;
-    const n = nodes.length;
-    nodes.forEach((d, i) => {
-      const angle = (i / Math.max(n, 1)) * Math.PI * 2;
-      const spread = Math.min(width, height) * 0.12;
-      d.x = cx + Math.cos(angle) * spread;
-      d.y = cy + Math.sin(angle) * spread;
-    });
+    const seen = new Set()
+    for (const id of visibleNodeIds) {
+      const meta = baseNodes.get(id)
+      if (!meta) continue
+      const key = meta.clusterKey
+      if (seen.has(key)) continue
+      seen.add(key)
+      const c = clusterPixelCenter(key, w, h)
+      g.append('text')
+        .attr('x', c.cx)
+        .attr('y', c.cy - 52)
+        .attr('text-anchor', 'middle')
+        .attr('class', 'network-map-cluster-label')
+        .text(clusterLabel(key))
+    }
 
-    const linkCount = Math.max(links.length, 1);
-    const chargeMag = n <= 10 ? Math.min(160, 60 + n * 12) : Math.min(320, 100 + n * 18);
-    const linkDist = Math.max(48, Math.min(100, (width + height) / (4 + linkCount * 0.15)));
+    const zoom = d3
+      .zoom()
+      .scaleExtent([0.35, 3])
+      .on('zoom', (event) => {
+        transformRef.current = event.transform
+        const gNode = svgLabelsGRef.current
+        if (gNode) d3.select(gNode).attr('transform', event.transform.toString())
+        requestRedraw()
+      })
 
-    const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).id(d => d.id).distance(linkDist).strength(0.7))
-      .force('charge', d3.forceManyBody().strength(-chargeMag))
-      .force('center', d3.forceCenter(cx, cy))
-      .force('collide', d3.forceCollide().radius(d => d.radius + 6).strength(0.9))
-      .force('x', d3.forceX(cx).strength(n <= 12 ? 0.06 : 0.02))
-      .force('y', d3.forceY(cy).strength(n <= 12 ? 0.06 : 0.02));
+    zoomBehaviorRef.current = zoom
+    const z = d3.select(container).call(zoom)
+    z.on('dblclick.zoom', null)
 
-    // Glow filter
-    const defs = svg.append("defs");
-    const filter = defs.append("filter").attr("id", "glow");
-    filter.append("feGaussianBlur").attr("stdDeviation", "3").attr("result", "coloredBlur");
-    const feMerge = filter.append("feMerge");
-    feMerge.append("feMergeNode").attr("in", "coloredBlur");
-    feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+    return () => {
+      z.on('zoom', null)
+      zoomBehaviorRef.current = null
+    }
+  }, [chartSize.width, chartSize.height, baseNodes, visibleNodeIds, requestRedraw])
 
-    // Aristas
-    const link = g.append('g')
-      .selectAll('line')
-      .data(links)
-      .join('line')
-      .attr('stroke', d => d.color)
-      .attr('stroke-width', d => Math.min(Math.max(1, d.value / 2), 5))
-      .attr('stroke-opacity', 0.6)
-      .attr('filter', d => d.isIncident ? 'url(#glow)' : null);
+  const handleCenterView = useCallback(() => {
+    const container = containerRef.current
+    const zoom = zoomBehaviorRef.current
+    if (!container || !zoom) return
+    const w = chartSize.width
+    const h = chartSize.height
+    const pos = positionsRef.current
+    if (visibleNodeIds.size === 0) {
+      d3.select(container).call(zoom.transform, d3.zoomIdentity)
+      transformRef.current = d3.zoomIdentity
+      requestRedraw()
+      return
+    }
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+    for (const id of visibleNodeIds) {
+      const p = pos.get(id)
+      const meta = baseNodes.get(id)
+      if (!p || !meta) continue
+      const r = meta.radius + 8
+      minX = Math.min(minX, p.x - r)
+      minY = Math.min(minY, p.y - r)
+      maxX = Math.max(maxX, p.x + r)
+      maxY = Math.max(maxY, p.y + r)
+    }
+    if (!Number.isFinite(minX)) return
+    const bw = maxX - minX || 1
+    const bh = maxY - minY || 1
+    const pad = 48
+    const scale = Math.min((w - pad * 2) / bw, (h - pad * 2) / bh, 1.2)
+    const tx = w / 2 - (scale * (minX + maxX)) / 2
+    const ty = h / 2 - (scale * (minY + maxY)) / 2
+    const next = d3.zoomIdentity.translate(tx, ty).scale(scale)
+    d3.select(container).transition().duration(400).call(zoom.transform, next)
+  }, [chartSize.width, chartSize.height, visibleNodeIds, baseNodes, requestRedraw])
 
-    // Nodos
-    const nodeGroup = g.append('g')
-      .selectAll('g')
-      .data(nodes)
-      .join('g')
-      .call(d3.drag()
-        .on('start', (event, d) => {
-          if (!event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x; d.fy = d.y;
-        })
-        .on('drag', (event, d) => {
-          d.fx = event.x; d.fy = event.y;
-        })
-        .on('end', (event, d) => {
-          if (!event.active) simulation.alphaTarget(0);
-          d.fx = null; d.fy = null;
-        })
-      )
-      .on('click', (event, d) => {
-        if (d.type === 'identity') setSelectedNode(d.data);
-      });
+  useEffect(() => {
+    if (!mapFocusNodeId) return
+    const container = containerRef.current
+    const zoom = zoomBehaviorRef.current
+    if (!container || !zoom) return
+    if (!baseNodes.has(mapFocusNodeId)) {
+      clearMapFocusRequest()
+      return
+    }
+    const meta = baseNodes.get(mapFocusNodeId)
+    const p = positionsRef.current.get(mapFocusNodeId)
+    const w = chartSize.width
+    const h = chartSize.height
+    if (!meta || !p || w < 48 || h < 48) return
 
-    // Círculos
-    nodeGroup.append('circle')
-      .attr('r', d => d.radius)
-      .attr('fill', d => d.color)
-      .attr('stroke', strokeColor)
-      .attr('stroke-width', 2)
-      .style('cursor', 'pointer');
+    const focusPad = 56
+    const extent = Math.max((meta.radius + 24) * 2, 88)
+    const scale = Math.min((w - focusPad * 2) / extent, (h - focusPad * 2) / extent, 2)
+    const k = Math.max(0.45, scale)
+    const tx = w / 2 - k * p.x
+    const ty = h / 2 - k * p.y
+    const next = d3.zoomIdentity.translate(tx, ty).scale(k)
+    d3.select(container).transition().duration(450).call(zoom.transform, next)
 
-    // Labels para identidades
-    nodeGroup.append('text')
-      .filter(d => d.type === 'identity')
-      .text(d => d.data.nombre_completo?.split(' ')[0] || d.id)
-      .attr('x', 0)
-      .attr('y', d => d.radius + 15)
-      .attr('text-anchor', 'middle')
-      .style('fill', 'var(--text-main)')
-      .style('font-size', '11px')
-      .style('font-family', 'var(--font-ui, sans-serif)')
-      .style('pointer-events', 'none');
+    const t = window.setTimeout(() => clearMapFocusRequest(), 480)
+    return () => window.clearTimeout(t)
+  }, [
+    mapFocusNodeId,
+    identityKey,
+    chartSize.width,
+    chartSize.height,
+    baseNodes,
+    clearMapFocusRequest,
+  ])
 
-    const pad = 12;
-    simulation.on('tick', () => {
-      nodes.forEach((d) => {
-        const r = (d.radius || 8) + pad;
-        d.x = Math.max(r, Math.min(width - r, d.x));
-        d.y = Math.max(r, Math.min(height - r, d.y));
-      });
+  const screenToWorld = useCallback(
+    (clientX, clientY) => {
+      const canvas = canvasRef.current
+      if (!canvas) return null
+      const rect = canvas.getBoundingClientRect()
+      const x = clientX - rect.left
+      const y = clientY - rect.top
+      const t = transformRef.current
+      return { x: (x - t.x) / t.k, y: (y - t.y) / t.k }
+    },
+    [],
+  )
 
-      link
-        .attr('x1', d => d.source.x)
-        .attr('y1', d => d.source.y)
-        .attr('x2', d => d.target.x)
-        .attr('y2', d => d.target.y);
+  const pickNode = useCallback(
+    (wx, wy) => {
+      const pos = positionsRef.current
+      let hit = null
+      let best = Infinity
+      for (const id of visibleNodeIds) {
+        const meta = baseNodes.get(id)
+        const p = pos.get(id)
+        if (!meta || !p) continue
+        const r = meta.radius + 6
+        const d = Math.hypot(wx - p.x, wy - p.y)
+        if (d <= r && d < best) {
+          best = d
+          hit = id
+        }
+      }
+      return hit
+    },
+    [visibleNodeIds, baseNodes],
+  )
 
-      nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
-    });
+  const pickLink = useCallback((wx, wy) => {
+    const geoms = hoverRef.current._linkGeoms
+    if (!geoms?.length) return null
+    let bestD = 12
+    let best = null
+    for (const g of geoms) {
+      const d = distToQuad(wx, wy, g.p0.x, g.p0.y, g.cx, g.cy, g.p1.x, g.p1.y)
+      if (d < bestD) {
+        bestD = d
+        best = { key: `${g.link.source}|${g.link.target}`, link: g.link }
+      }
+    }
+    return best
+  }, [])
 
-    return () => simulation.stop();
-  }, [graphData, chartSize.width, chartSize.height]);
+  const onCanvasMove = useCallback(
+    (ev) => {
+      const wpt = screenToWorld(ev.clientX, ev.clientY)
+      if (!wpt) return
+      const nid = pickNode(wpt.x, wpt.y)
+      if (nid) {
+        if (hoverRef.current.nodeId !== nid) {
+          hoverRef.current.nodeId = nid
+          hoverRef.current.linkKey = null
+          const meta = baseNodes.get(nid)
+          const p = positionsRef.current.get(nid)
+          setHoverTip({
+            x: ev.clientX,
+            y: ev.clientY,
+            type: 'node',
+            nombre: meta?.nombre,
+            area: meta?.area,
+            score: meta?.score,
+            edges: degreeById.get(nid) || 0,
+          })
+        } else {
+          setHoverTip((prev) =>
+            prev ? { ...prev, x: ev.clientX, y: ev.clientY } : prev,
+          )
+        }
+        requestRedraw()
+        return
+      }
+      const lp = pickLink(wpt.x, wpt.y)
+      if (lp?.link) {
+        if (hoverRef.current.linkKey !== lp.key) {
+          hoverRef.current.linkKey = lp.key
+          hoverRef.current.nodeId = null
+          setHoverTip({
+            x: ev.clientX,
+            y: ev.clientY,
+            type: 'link',
+            traffic: lp.link.lastSource || 'interno',
+            volume: lp.link.volume,
+            level: lp.link.level,
+          })
+        } else {
+          setHoverTip((prev) =>
+            prev ? { ...prev, x: ev.clientX, y: ev.clientY } : prev,
+          )
+        }
+        requestRedraw()
+        return
+      }
+      hoverRef.current.nodeId = null
+      hoverRef.current.linkKey = null
+      setHoverTip(null)
+      requestRedraw()
+    },
+    [screenToWorld, pickNode, pickLink, baseNodes, degreeById, requestRedraw],
+  )
 
-  // Encontrar eventos locales al panel
-  const nodeEvents = useMemo(() => {
-    if (!selectedNode) return [];
-    return (events || [])
-      .filter(e => e.interno?.id_usuario === selectedNode.id || e.interno?.ip === selectedNode.ip_asociada)
-      .slice(0, 5);
-  }, [events, selectedNode]);
+  const onCanvasLeave = useCallback(() => {
+    hoverRef.current.nodeId = null
+    hoverRef.current.linkKey = null
+    setHoverTip(null)
+    requestRedraw()
+  }, [requestRedraw])
+
+  const onCanvasClick = useCallback(
+    (ev) => {
+      const wpt = screenToWorld(ev.clientX, ev.clientY)
+      if (!wpt) return
+      const nid = pickNode(wpt.x, wpt.y)
+      if (nid) openDetailPanel('identity', nid)
+    },
+    [screenToWorld, pickNode, openDetailPanel],
+  )
 
   return (
     <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col">
@@ -251,70 +743,108 @@ export default function NetworkMap() {
       </h2>
 
       <div className="mb-3 grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-3">
-        <MetricCard label="Nodos en grafo" value={graphData.nodes.length} />
-        <MetricCard label="Aristas activas" value={graphData.links.length} />
+        <MetricCard label="Nodos visibles" value={visibleNodeIds.size} />
+        <MetricCard label="Conexiones internas (5 min)" value={visibleLinks.length} />
         <MetricCard label="Eventos (5 min)" value={recentEvents5m} />
       </div>
 
-      <div
-        ref={measureRef}
-        className="relative min-h-[min(60vh,520px)] w-full flex-1 overflow-hidden rounded-lg border border-[var(--border-default)] bg-[var(--base-deep)]"
-      >
-        <svg ref={svgRef} className="absolute inset-0 block h-full w-full" />
+      <div className="mb-2 shrink-0">
+        <NetworkMapToolbar
+          variant="bar"
+          showConnections={showConnections}
+          onToggleConnections={setShowConnections}
+          minSeverity={minSeverityClamped}
+          onMinSeverityChange={setMinSeverity}
+          activeOnly={activeOnly}
+          onToggleActiveOnly={setActiveOnly}
+          onCenterView={handleCenterView}
+        />
       </div>
 
-      {selectedNode && (
-        <Card className="absolute top-4 right-4 w-[360px] p-0 z-20 flex flex-col shadow-2xl animate-slide-in-right bg-[var(--base-surface)]/95 backdrop-blur">
-           <div className="p-4 border-b border-[var(--base-border)] flex justify-between items-start">
-             <div>
-               <h3 className="font-bold text-white text-[15px]">{selectedNode.nombre_completo}</h3>
-               <p className="text-[11px] text-[var(--color-primary)] uppercase tracking-wider mt-1">{selectedNode.area}</p>
-             </div>
-             <button onClick={() => setSelectedNode(null)} className="text-[var(--text-sec)] hover:text-white">✕</button>
-           </div>
-           
-           <div className="p-4 flex-1">
-             <div className="flex gap-4 mb-4">
-               <div>
-                 <p className="text-[11px] text-[var(--text-sec)]">Riesgo Actual</p>
-                 <RiskBadge score={selectedNode.risk_score || 0} severidad={scoreToSeverity(selectedNode.risk_score || 0)} />
-               </div>
-               <div>
-                  <p className="text-[11px] text-[var(--text-sec)]">IP Address</p>
-                  <MonoText>{selectedNode.ip_asociada || 'N/A'}</MonoText>
-               </div>
-             </div>
+      <div
+        ref={containerRef}
+        className="relative min-h-[min(60vh,520px)] w-full flex-1 overflow-hidden rounded-lg border border-[var(--border-default)] bg-[var(--base-deep)]"
+      >
+        <canvas
+          ref={canvasRef}
+          className="absolute left-0 top-0 block h-full w-full cursor-grab active:cursor-grabbing"
+          onMouseMove={onCanvasMove}
+          onMouseLeave={onCanvasLeave}
+          onClick={onCanvasClick}
+          aria-label="Mapa de red interna"
+        />
+        <svg
+          ref={svgLabelsRef}
+          className="pointer-events-none absolute left-0 top-0 h-full w-full text-[length:var(--text-xs)]"
+          aria-hidden
+        />
 
-             <div className="mt-4">
-               <h4 className="text-[11px] uppercase tracking-wider text-[var(--text-sec)] mb-2">Últimos Conectados</h4>
-               <div className="space-y-2">
-                 {nodeEvents.length === 0 ? (
-                   <div className="text-xs text-[var(--text-sec)] text-center p-4">Sin actividad reciente</div>
-                 ) : (
-                   nodeEvents.map(ev => (
-                     <div key={ev.id} className="bg-[var(--base-deep)] p-2 rounded border border-[var(--base-border)] text-xs flex justify-between items-center group">
-                        <MonoText className="truncate w-2/3">{ev.externo?.valor || ev.source}</MonoText>
-                        <span className="text-[10px] text-[var(--text-sec)] shrink-0">{new Date(ev.timestamp).toLocaleTimeString()}</span>
-                     </div>
-                   ))
-                 )}
-               </div>
-             </div>
-             
-             <button
-               type="button"
-               className="w-full mt-4 py-2 border border-[var(--base-border)] text-white rounded text-sm hover:bg-[var(--border-default)] transition-colors"
-               onClick={() => {
-                 const id = selectedNode?.id ?? selectedNode?.ip_asociada
-                 if (id != null) openDetailPanel('identity', id)
-               }}
-             >
-               Abrir en panel de detalle
-             </button>
-           </div>
-        </Card>
-      )}
+        <div className="pointer-events-none absolute inset-0">
+          <style>{`
+            .network-map-cluster-label {
+              fill: var(--base-muted);
+              font-family: var(--font-ui, system-ui, sans-serif);
+              font-size: var(--text-xs);
+              font-weight: 500;
+              letter-spacing: 0.06em;
+              text-transform: uppercase;
+            }
+          `}</style>
+        </div>
+
+        {baseNodes.size > 0 && visibleNodeIds.size === 0 ? (
+          <div
+            className="pointer-events-auto absolute inset-0 z-20 flex items-center justify-center p-6"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="max-w-md rounded-lg border border-[var(--base-border)] bg-[var(--base-surface)]/95 px-5 py-4 text-center shadow-lg backdrop-blur">
+              <p className="text-sm font-medium text-[var(--base-bright)]">
+                Ningún nodo visible con los filtros actuales
+              </p>
+              <p className="mt-2 text-xs text-[var(--base-subtle)]">
+                Subí el umbral de score mínimo demasiado, o activaste &quot;Solo activos&quot; sin eventos recientes
+                para esas identidades. Bajá el slider o desactivá el filtro de activos.
+              </p>
+              <button
+                type="button"
+                className="mt-4 rounded border border-[var(--cyan-border)] bg-[var(--base-raised)] px-4 py-2 text-xs font-medium text-[var(--cyan-bright)] hover:bg-[var(--base-overlay)]"
+                onClick={() => {
+                  setMinSeverity(0)
+                  setActiveOnly(false)
+                }}
+              >
+                Restablecer filtros
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {hoverTip ? (
+          <div
+            className="pointer-events-none fixed z-30 max-w-xs rounded border border-[var(--base-border)] bg-[var(--base-overlay)] px-3 py-2 text-xs text-[var(--base-text)] shadow-lg"
+            style={{ left: hoverTip.x + 12, top: hoverTip.y + 12 }}
+          >
+            {hoverTip.type === 'node' ? (
+              <>
+                <p className="font-semibold text-[var(--base-bright)]">{hoverTip.nombre}</p>
+                <p className="text-[var(--base-subtle)]">{hoverTip.area}</p>
+                <p className="mt-1 font-mono text-[var(--cyan-soft)]">
+                  Risk {Math.round(hoverTip.score || 0)} · {hoverTip.edges} enlaces activos
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-[var(--base-bright)]">Tráfico</p>
+                <p className="text-[var(--base-subtle)]">{String(hoverTip.traffic)}</p>
+                <p className="mt-1 text-[var(--cyan-soft)]">
+                  Volumen {hoverTip.volume} · {hoverTip.level}
+                </p>
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
     </div>
-  );
+  )
 }
-

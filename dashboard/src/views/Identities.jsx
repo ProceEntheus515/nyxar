@@ -1,20 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useStore } from '../store'
 import Card from '../components/ui/Card'
 import IdentityRow from '../components/data/IdentityRow'
+import IdentitiesChartsPanel from '../components/identities/IdentitiesChartsPanel'
 
 export default function Identities() {
-  const { identities } = useStore()
+  const { identities, events } = useStore()
   const [selectedId, setSelectedId] = useState(null)
 
   const sortedIdentities = Object.values(identities || {}).sort(
     (a, b) => (b.risk_score || 0) - (a.risk_score || 0),
   )
 
+  const eventsList = useMemo(() => events || [], [events])
+
+  const handleIdentityFromChart = (row) => {
+    const id = row?.id ?? row?.identidad_id ?? row?.ip_asociada
+    if (id != null) setSelectedId(String(id))
+  }
+
   return (
     <div className="h-full flex gap-4 w-full min-h-0">
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${selectedId ? 'w-2/3' : 'w-full'}`}>
         <h2 className="text-xl font-semibold text-white mb-4 shrink-0">Risk Identities</h2>
+
+        <IdentitiesChartsPanel
+          className="mb-6 shrink-0"
+          identities={sortedIdentities}
+          events={eventsList}
+          onIdentityChartSelect={handleIdentityFromChart}
+        />
 
         <div className="flex flex-col gap-3 overflow-y-auto pr-1">
           {sortedIdentities.map((id) => (

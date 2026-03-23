@@ -1,6 +1,12 @@
 import { areaToColor, scoreToColor } from '../../lib/colors'
+import { isDevDataEnabled } from '../../lib/devData'
+import {
+  makeRiskSparkline24h,
+  sparklineFromScoreHistory,
+} from '../../lib/chartMockHelpers'
 import { scoreToSeverity } from '../../lib/utils'
 import RiskBadge from '../ui/RiskBadge'
+import RiskSparkline from '../charts/RiskSparkline'
 import styles from './IdentityRow.module.css'
 
 function initials(nombre) {
@@ -52,6 +58,11 @@ export default function IdentityRow({
   const h = identity.hostname && identity.dispositivo !== identity.hostname ? identity.hostname : ''
   const subline = compact && !h ? u : h ? `${u}  ·  ${h}` : u
 
+  const sparkData =
+    identity.risk_sparkline_24h ||
+    sparklineFromScoreHistory(identity.score_history_24h, score) ||
+    (isDevDataEnabled ? makeRiskSparkline24h(score) : [])
+
   return (
     <div
       role={onClick ? 'button' : undefined}
@@ -92,6 +103,10 @@ export default function IdentityRow({
       </div>
 
       <div className={styles.area}>{area}</div>
+
+      <div className={styles.spark} aria-hidden>
+        <RiskSparkline data={sparkData} width={80} height={32} />
+      </div>
 
       <div className={styles.risk}>
         <div className={styles.riskTop}>

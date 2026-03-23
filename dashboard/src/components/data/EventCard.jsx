@@ -27,6 +27,7 @@ function enrichmentContext(event) {
 export default function EventCard({
   event,
   compact = false,
+  dense = false,
   selected = false,
   onClick,
   className = '',
@@ -67,6 +68,7 @@ export default function EventCard({
       className={[
         styles.card,
         compact ? styles.compact : '',
+        dense ? styles.dense : '',
         selected ? styles.selected : '',
         isNew ? 'animate-fadeUp' : '',
         className,

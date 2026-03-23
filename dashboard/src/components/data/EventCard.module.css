@@ -113,3 +113,22 @@
 .compact .time {
   margin-left: auto;
 }
+
+/* Fila virtualizada compacta (76px): menos aire sin perder legibilidad. */
+.dense.card {
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+}
+
+.dense .header {
+  gap: var(--space-1) var(--space-2);
+}
+
+.dense .user {
+  max-width: 9rem;
+}
+
+.dense .compactMain {
+  margin-top: 0;
+  padding-top: var(--space-1);
+}

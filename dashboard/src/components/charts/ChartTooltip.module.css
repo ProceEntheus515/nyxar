@@ -1,0 +1,23 @@
+/* Tooltips de charts: números monoespacio, etiquetas UI (F09). */
+.wrap {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: var(--border-width) solid var(--base-border-strong);
+  background: var(--base-overlay);
+  box-shadow: var(--shadow-md);
+}
+
+.label {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--base-subtle);
+  margin: 0 0 2px;
+}
+
+.value {
+  font-family: var(--font-data);
+  font-size: var(--text-xs);
+  color: var(--base-bright);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}

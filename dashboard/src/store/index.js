@@ -28,11 +28,21 @@ export const useStore = create((set) => ({
   detailPanel: { type: null, id: null, isOpen: false },
   /** Si se setea, Timeline intenta hacer scroll a ese evento y luego se limpia. */
   timelineFocusEventId: null,
+  /**
+   * ID de nodo interno (misma clave que buildIdentityNodes: IP / id_usuario).
+   * NetworkMap hace zoom al nodo y luego limpia el valor.
+   */
+  mapFocusNodeId: null,
   sidebarCollapsed: readSidebarCollapsed(),
   /** Propuestas de respuesta pendientes (badge en sidebar; WebSocket en futuras iteraciones). */
   responseProposalsPending: 0,
 
   setTimelineFocusEventId: (id) => set({ timelineFocusEventId: id || null }),
+
+  requestMapFocus: (nodeId) =>
+    set({ mapFocusNodeId: nodeId != null && String(nodeId).trim() ? String(nodeId).trim() : null }),
+
+  clearMapFocusRequest: () => set({ mapFocusNodeId: null }),
 
   setResponseProposalsPending: (n) =>
     set({ responseProposalsPending: Math.max(0, Number(n) || 0) }),
@@ -103,12 +113,47 @@ export const useStore = create((set) => ({
   
   setLabMode: (mode) => set({ isLabMode: mode }),
   
-  setInitialState: ({ last_events, risk_identities, ai_memos }) => set((state) => {
-     const idsMap = (risk_identities || []).reduce((acc, curr) => ({...acc, [curr.id]: curr}), {});
-     return {
-       events: last_events || [],
-       identities: { ...state.identities, ...idsMap },
-       aiMemos: ai_memos || []
-     };
-  })
+  setInitialState: (payload = {}) =>
+    set((state) => {
+      const {
+        last_events,
+        risk_identities,
+        ai_memos,
+        stats: statsPatch,
+        alerts: alertsList,
+        incidents: incidentsList,
+        health_report,
+        health_throughput,
+      } = payload
+
+      const idsMap = (risk_identities || []).reduce(
+        (acc, curr) => ({ ...acc, [curr.id]: curr }),
+        {},
+      )
+
+      const next = {
+        events: Array.isArray(last_events) ? last_events : state.events,
+        identities: { ...state.identities, ...idsMap },
+        aiMemos: Array.isArray(ai_memos) ? ai_memos : state.aiMemos,
+      }
+
+      if (statsPatch != null && typeof statsPatch === 'object') {
+        next.stats = { ...state.stats, ...statsPatch }
+      }
+      if (Array.isArray(alertsList)) {
+        next.alerts = alertsList
+      }
+      if (Array.isArray(incidentsList)) {
+        next.incidents = incidentsList
+      }
+      if (health_report != null) {
+        next.healthReport = health_report
+        next.healthGeneral = health_report.estado_general ?? null
+      }
+      if (Array.isArray(health_throughput)) {
+        next.healthThroughput = health_throughput
+      }
+
+      return next
+    }),
 }));

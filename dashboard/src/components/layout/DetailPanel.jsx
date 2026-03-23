@@ -1,4 +1,5 @@
 import { useStore } from '../../store'
+import EventDetailContent from '../timeline/EventDetailContent'
 import styles from './DetailPanel.module.css'
 
 const TYPE_LABEL = {
@@ -31,14 +32,20 @@ export default function DetailPanel({ wideLayout }) {
           </button>
         </div>
         <div className={styles.body}>
-          <p className={styles.placeholder}>
-            Tipo: {type || '—'}
-            <br />
-            ID: {id != null ? String(id) : '—'}
-          </p>
-          <p className={styles.placeholder}>
-            El contenido contextual (mapa, timeline, incidentes) se enlaza aquí vía openDetailPanel(type, id).
-          </p>
+          {type === 'event' && id != null ? (
+            <EventDetailContent eventId={id} />
+          ) : (
+            <>
+              <p className={styles.placeholder}>
+                Tipo: {type || '—'}
+                <br />
+                ID: {id != null ? String(id) : '—'}
+              </p>
+              <p className={styles.placeholder}>
+                El contenido contextual (mapa, timeline, incidentes) se enlaza aquí vía openDetailPanel(type, id).
+              </p>
+            </>
+          )}
         </div>
       </aside>
     </>

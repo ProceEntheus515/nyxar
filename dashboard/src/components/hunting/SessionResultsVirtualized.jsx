@@ -38,8 +38,8 @@ export function HuntResultCard({ row, onOpenTimeline }) {
   )
 }
 
-function HuntResultRow({ index, style, ariaAttributes, rowProps }) {
-  const { rows, onOpenTimeline } = rowProps
+function HuntResultRow({ index, style, ariaAttributes, rows, onOpenTimeline }) {
+  if (!rows) return null
   const row = rows[index]
   if (!row) return null
   return (

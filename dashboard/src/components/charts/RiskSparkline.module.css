@@ -1,0 +1,9 @@
+.wrap {
+  display: block;
+  min-width: 0;
+}
+
+.empty {
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--base-border) 40%, transparent);
+}

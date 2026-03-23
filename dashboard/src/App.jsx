@@ -5,7 +5,8 @@ import { useStore } from './store'
 import Skeleton from './components/ui/Skeleton'
 import AppShell from './components/layout/AppShell'
 
-import { MOCK_DATA } from './lib/mock'
+import { isDevDataEnabled } from './lib/devData'
+import { buildDevMockInitialState } from './lib/mock'
 
 const NetworkMap = React.lazy(() => import('./views/NetworkMap'))
 const Timeline = React.lazy(() => import('./views/Timeline'))
@@ -36,7 +37,7 @@ function AppRoutes() {
   const { isLabMode, identities, setInitialState } = useStore()
 
   useEffect(() => {
-    setInitialState(MOCK_DATA)
+    if (isDevDataEnabled) setInitialState(buildDevMockInitialState())
   }, [setInitialState])
 
   return (
@@ -82,7 +83,7 @@ function AppRoutes() {
       </Suspense>
 
       <Suspense fallback={null}>
-        <AttackInjector isLabMode={isLabMode || true} identities={identities} />
+        <AttackInjector isLabMode={isLabMode || isDevDataEnabled} identities={identities} />
       </Suspense>
     </>
   )

@@ -1,0 +1,24 @@
+.wrap {
+  width: 100%;
+  min-width: 0;
+}
+
+.dot {
+  outline: none;
+}
+
+.dot:focus-visible {
+  outline: 1.5px solid var(--cyan-base);
+  outline-offset: 2px;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--base-muted);
+  border-radius: var(--radius-sm);
+  border: var(--border-width) dashed var(--base-border);
+}

@@ -1,0 +1,25 @@
+.wrap {
+  width: 100%;
+  min-width: 0;
+}
+
+.barEnter {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: barGrowY var(--duration-normal) var(--ease-out) backwards;
+}
+
+@keyframes barGrowY {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barEnter {
+    animation: none;
+  }
+}
