@@ -1,5 +1,4 @@
 import os
-import json
 import uuid
 import asyncio
 from datetime import datetime, timezone
@@ -18,17 +17,41 @@ logger = get_logger("api.ai")
 mongo_client = MongoClient()
 redis_bus = RedisBus()
 
+
+def _shape_memo_for_api(doc: dict) -> dict:
+    """Normaliza documentos de ai_memos al contrato I09 (GET /ai/memos)."""
+    if not doc:
+        return doc
+    out = dict(doc)
+    raw_tipo = out.get("tipo") or "autonomo"
+    if raw_tipo == "autonomous":
+        raw_tipo = "autonomo"
+    out["tipo"] = raw_tipo
+    out.setdefault("contenido", out.get("contenido") or "")
+    out.setdefault("prioridad", "media")
+    er = out.get("eventos_relacionados")
+    if er is None and out.get("eventos_clave"):
+        er = out["eventos_clave"]
+    out["eventos_relacionados"] = list(er) if isinstance(er, list) else []
+    out.setdefault("created_at", out.get("created_at") or "")
+    if not out.get("titulo"):
+        gen = out.get("generado_por")
+        out["titulo"] = f"Análisis IA ({gen})" if gen else "Análisis IA"
+    out.setdefault("id", out.get("id") or "")
+    return out
+
+
 @router.get("/memos")
 async def list_memos(limit: int = 20, offset: int = 0):
     col = mongo_client.db.ai_memos
     total = await col.count_documents({})
-    
+
     cursor = col.find({}).sort("created_at", -1).skip(offset).limit(limit)
     memos = []
     async for doc in cursor:
         doc.pop("_id", None)
-        memos.append(doc)
-        
+        memos.append(_shape_memo_for_api(doc))
+
     return success_response(memos, total)
 
 async def _correr_analisis_claude(incident_id: str, memo_id: str):
@@ -60,19 +83,24 @@ async def _correr_analisis_claude(incident_id: str, memo_id: str):
 
         memo = {
             "id": memo_id,
-            "incident_id": incident_id,
+            "tipo": "autonomo",
+            "titulo": f"Análisis incidente {incident_id}",
             "contenido": result,
+            "prioridad": "media",
+            "eventos_relacionados": [],
+            "incident_id": incident_id,
             "generado_por": "Claude 4.6 Opus",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        
+
         await mongo_client.db.ai_memos.insert_one(memo)
-        
-        # Publicar notificación por canal de WebSockets
+
         try:
-            r = redis_bus.client
-            if r:
-                await r.publish("channel:ai_updates", json.dumps(memo))
+            if redis_bus.client:
+                await redis_bus.publish_alert(
+                    "dashboard:events",
+                    {"tipo": "ai_memo", "data": memo},
+                )
         except Exception:
             pass
             

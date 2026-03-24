@@ -32,6 +32,12 @@
   grid-column: 1;
   grid-row: 1;
   min-height: 0;
+  /* Misma anchura que la pista del grid (evita min-width:0 + hijo más ancho) */
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  max-width: var(--sidebar-width);
+  position: relative;
+  z-index: 50;
   overflow: hidden;
 }
 
@@ -43,6 +49,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .detailSlot {

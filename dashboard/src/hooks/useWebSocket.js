@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { useStore } from '../store';
+import { showToast } from '../lib/toastBus';
 
 /**
  * URL del servidor Socket.IO (misma API FastAPI).
@@ -14,7 +15,6 @@ export function useWebSocket() {
     addEventBatch,
     addAlert,
     addHoneypotHit,
-    addAiMemo,
     addProposal,
     updateIdentity,
     updateStats,
@@ -66,8 +66,32 @@ export function useWebSocket() {
       updateIdentity({ ...update, id: update.identidad_id });
     });
 
-    socket.on('ai_memo', (memo) => {
-      addAiMemo(memo);
+    socket.on('ai_memo', (payload) => {
+      const memo =
+        payload &&
+        typeof payload === 'object' &&
+        payload.data &&
+        typeof payload.data === 'object' &&
+        !payload.id
+          ? payload.data
+          : payload;
+      if (!memo || typeof memo !== 'object') return;
+      useStore.getState().addAiMemo(memo);
+      const prioridad = String(memo.prioridad || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{M}/gu, '');
+      const esAlta = prioridad === 'alta' || prioridad === 'critica' || prioridad.includes('crit');
+      if (esAlta) {
+        const raw = memo.titulo || memo.contenido || '';
+        const message =
+          typeof raw === 'string' && raw.length > 80 ? `${raw.slice(0, 80)}...` : raw || '(sin texto)';
+        showToast({
+          type: 'warning',
+          title: 'Nuevo análisis IA',
+          message,
+        });
+      }
     });
 
     socket.on('stats_update', (stats) => {

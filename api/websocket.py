@@ -264,9 +264,16 @@ async def redis_listener():
                 chan = ch.decode() if isinstance(ch, bytes) else ch
                 
                 if chan == "dashboard:events":
+                    tipo = data.get("tipo") or data.get("type")
+                    payload = data.get("data") if data.get("data") is not None else data.get("payload")
+
+                    if tipo == "ai_memo" and isinstance(payload, dict):
+                        await sio.emit(AI_MEMO, payload)
+                        continue
+
                     evt_type = data.get("type")
                     payload = data.get("payload")
-                    
+
                     if evt_type == "new_event":
                         await event_queue.put(payload)
                     elif evt_type == "new_alert":

@@ -6,6 +6,7 @@ import { AboutNyxar } from './AboutNyxar'
 import SidebarNavItem from './SidebarNavItem'
 import SidebarHealthDot from './SidebarHealthDot'
 import LabSimulatorDock from './LabSimulatorDock'
+import AiMemo from '../AiMemo'
 import { isDevDataEnabled } from '../../lib/devData'
 import styles from './Sidebar.module.css'
 
@@ -110,6 +111,8 @@ export function Sidebar({ isNarrowViewport }) {
             ))}
           </div>
         </nav>
+
+        <AiMemo collapsed={effectiveCollapsed} />
 
         <div className={styles.footer}>
           <hr className={styles.sep} />

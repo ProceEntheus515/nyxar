@@ -200,7 +200,7 @@ export const useStore = create(
 
       addAiMemo: (memo) =>
         set((state) => ({
-          aiMemos: [memo, ...state.aiMemos],
+          aiMemos: [memo, ...state.aiMemos].slice(0, 50),
         })),
 
       setAiMemos: (memos) => set({ aiMemos: Array.isArray(memos) ? memos : [] }),

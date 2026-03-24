@@ -39,12 +39,7 @@ class AutonomousAnalyst:
         await asyncio.sleep(60) # Demora en arrancar para permitir que haya data viva
         while self._running:
             try:
-                memo = await self.analyze_current_state()
-                if memo:
-                    # Guardamos en mongo y publicamos
-                    await self.mongo.db.ai_memos.insert_one(memo)
-                    del memo["_id"] # Safe dict para Redis
-                    await self.redis_bus.publish_ai_memo(memo)
+                await self.analyze_current_state()
             except Exception as e:
                 logger.error(f"Error en loop autónomo: {e}")
             await asyncio.sleep(self.ANALYSIS_INTERVAL)
@@ -77,71 +72,81 @@ class AutonomousAnalyst:
             
         return "\n".join(ctx)[:8000] # Safe substring approx 2000 tokens
 
-    async def analyze_current_state(self) -> dict:
+    async def analyze_current_state(self) -> None:
         """
-        Recopila contexto y decide si vale la pena disparar a Claude.
+        Recopila contexto, llama a Claude y, si hay memo útil, persiste en MongoDB
+        y notifica al dashboard vía Redis PubSub (canal dashboard:events, tipo ai_memo).
         """
         db = self.mongo.db
-        
-        # 1. Recopilar contexto: identidades > 40
+
         identidades = await db.identities.find({"risk_score": {"$gte": 40}}).to_list(50)
-        
-        # Incidentes abiertos
         incidentes = await db.incidents.find({"estado": "abierto"}).to_list(50)
-        
+
         hace_24h = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
         hits_hp = await db.honeypot_hits.count_documents({"timestamp": {"$gte": hace_24h}})
-        
+
         hace_15m = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
         eventos_raw = await db.events.find({"timestamp": {"$gte": hace_15m}}).to_list(500)
-        
-        # 2. Heurística rápida de inactividad
+
         if not incidentes and not identidades and hits_hp == 0:
             logger.info("AutonomousAnalyst: Red pacífica. Ahorrando tokens. Saltando.")
-            return None
-            
+            return
+
         context_str = self._build_context_summary(eventos_raw, identidades, incidentes, hits_hp)
         prompt_filled = self.prompt_template.replace("{context}", context_str)
-        
-        memo_id = f"MEMO-AUTO-{uuid.uuid4().hex[:8]}"
-        memo_obj = {
-            "id": memo_id,
-            "incident_id": "GLOBAL-AUTO",
-            "tipo": "autonomous",
-            "contenido": "",
-            "generado_por": self.model,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        
+
         if not self.api_key:
             logger.warning("Falta API KEY para autonomous.")
-            return None
-            
+            return
+
         try:
             client = anthropic.AsyncAnthropic(api_key=self.api_key)
             resp = await client.messages.create(
                 model=self.model,
                 max_tokens=600,
                 temperature=0.3,
-                messages=[{"role": "user", "content": prompt_filled}]
+                messages=[{"role": "user", "content": prompt_filled}],
             )
             raw = resp.content[0].text if resp.content else "{}"
-            
+
             cl = raw.strip()
-            if cl.startswith("```json"): cl = cl[7:].strip()
-            elif cl.startswith("```"): cl = cl[3:].strip()
-            if cl.endswith("```"): cl = cl[:-3].strip()
-                
+            if cl.startswith("```json"):
+                cl = cl[7:].strip()
+            elif cl.startswith("```"):
+                cl = cl[3:].strip()
+            if cl.endswith("```"):
+                cl = cl[:-3].strip()
+
             parsed = json.loads(cl)
-            
+
             if parsed.get("prioridad") == "ninguna":
                 logger.info("Claude determinó que la actividad es normal. Omitiendo alerta general.")
-                return None
-                
-            memo_obj["contenido"] = parsed.get("contenido")
-            memo_obj["detalles"] = parsed
-            return memo_obj
-            
+                return
+
+            memo_id = f"MEMO-AUTO-{uuid.uuid4().hex[:8]}"
+            eventos_relacionados = parsed.get("eventos_relacionados") or parsed.get("eventos_clave") or []
+
+            memo_doc = {
+                "id": memo_id,
+                "tipo": "autonomo",
+                "titulo": (parsed.get("titulo") or "").strip() or "Análisis autónomo",
+                "contenido": (parsed.get("contenido") or "").strip(),
+                "prioridad": (parsed.get("prioridad") or "media").lower(),
+                "eventos_relacionados": list(eventos_relacionados) if isinstance(eventos_relacionados, list) else [],
+                "incident_id": "GLOBAL-AUTO",
+                "generado_por": self.model,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "accion_inmediata": parsed.get("accion_inmediata"),
+            }
+
+            await self.mongo.db.ai_memos.insert_one(memo_doc)
+
+            await self.redis_bus.publish_alert(
+                "dashboard:events",
+                {"tipo": "ai_memo", "data": memo_doc},
+            )
+
+            logger.info("Memo publicado: %s — %s", memo_doc["prioridad"], memo_doc["titulo"])
+
         except Exception as e:
             logger.error(f"Error analizando con Claude: {e}")
-            return None

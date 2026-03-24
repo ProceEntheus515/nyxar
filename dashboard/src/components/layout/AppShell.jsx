@@ -5,6 +5,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import CriticalHealthBanner from '../health/CriticalHealthBanner'
 import { Sidebar } from './Sidebar'
 import DetailPanel from './DetailPanel'
+import ToastHost from '../ui/ToastHost'
 import styles from './AppShell.module.css'
 
 const TAB_TITLES = {
@@ -48,7 +49,10 @@ export default function AppShell() {
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
   const detailOpen = useStore((s) => s.detailPanel.isOpen)
 
-  const sidebarPx = isNarrowViewport ? 56 : sidebarCollapsed ? 56 : 220
+  const SIDEBAR_EXPANDED_PX = 220
+  const SIDEBAR_COLLAPSED_PX = 56
+  const sidebarPx =
+    isNarrowViewport || sidebarCollapsed ? SIDEBAR_COLLAPSED_PX : SIDEBAR_EXPANDED_PX
   const detailCol =
     isWide && detailOpen ? 'minmax(0, var(--panel-width))' : 'minmax(0, 0px)'
 
@@ -66,6 +70,9 @@ export default function AppShell() {
         className={`${styles.root} ${showCriticalStripe ? styles.shellCritical : ''}`}
         style={{
           '--sidebar-width': `${sidebarPx}px`,
+          /* Debe coincidir con el grid: tokens.css usa 280px y recortaba el aside */
+          '--nav-width': `${SIDEBAR_EXPANDED_PX}px`,
+          '--nav-width-collapsed': `${SIDEBAR_COLLAPSED_PX}px`,
           '--detail-col': detailCol,
         }}
       >
@@ -82,6 +89,7 @@ export default function AppShell() {
             <div key={location.pathname} className={`${styles.outletFade} ${styles.outletScroll}`}>
               <Outlet />
             </div>
+            <ToastHost />
           </main>
 
           {isWide && detailOpen ? (

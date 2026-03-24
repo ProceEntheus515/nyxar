@@ -97,8 +97,9 @@
   --space-16: 64px;
 
   /* ─── LAYOUT ─────────────────────────────────────────────── */
-  --nav-width: 280px;
-  --nav-width-collapsed: 48px;
+  /* Debe alinearse con AppShell (--sidebar-width / grid); 280px recortaba el sidebar */
+  --nav-width: 220px;
+  --nav-width-collapsed: 56px;
   --panel-width: 340px;
   --header-height: 36px;
   --status-bar-height: 28px;
