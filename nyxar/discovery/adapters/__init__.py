@@ -9,7 +9,7 @@ from nyxar.discovery.adapters.firewall_adapter import (
     suggest_firewall_env,
 )
 from nyxar.discovery.adapters.proxy_adapter import ProxyAdapter, suggest_proxy_env
-from nyxar.discovery.adapters.siem_adapter import suggest_siem_env
+from nyxar.discovery.adapters.siem_adapter import SiemAdapter, suggest_siem_env
 from nyxar.discovery.adapters.tls_adapter import TlsAdapter, suggest_tls_env
 
 __all__ = [
@@ -18,6 +18,7 @@ __all__ = [
     "TlsAdapter",
     "SyslogReceiver",
     "generate_firewall_config_instructions",
+    "SiemAdapter",
     "suggest_dns_env",
     "suggest_firewall_env",
     "suggest_proxy_env",

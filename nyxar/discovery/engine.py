@@ -68,6 +68,8 @@ class InfrastructureMap:
     siem_present: bool = False
     siem_type: Optional[str] = None
     siem_ingest_url: Optional[str] = None
+    # Base API para consumo (Splunk mgmt :8089, Elasticsearch :9200, etc.)
+    siem_api_url: Optional[str] = None
 
     network_range: Optional[str] = None
     vlans_detected: list[str] = field(default_factory=list)
@@ -250,7 +252,15 @@ class DiscoveryEngine:
         ca_detail = infra.ca_cert_path or ""
         print(f"  CA interna:{status(infra.ca_internal, ca_detail)}")
         print(f"  AD/LDAP:   {status(infra.ad_present, infra.ad_domain or '')}")
-        print(f"  SIEM:      {status(infra.siem_present, infra.siem_type or '')}")
+        siem_detail_parts: list[str] = []
+        if infra.siem_type:
+            siem_detail_parts.append(infra.siem_type)
+        if infra.siem_api_url:
+            siem_detail_parts.append(f"api {infra.siem_api_url}")
+        if infra.siem_ingest_url:
+            siem_detail_parts.append(f"ingest {infra.siem_ingest_url}")
+        siem_detail = " ".join(siem_detail_parts)
+        print(f"  SIEM:      {status(infra.siem_present, siem_detail)}")
 
         confidence_pct = int(infra.confidence * 100)
         filled = confidence_pct // 10
