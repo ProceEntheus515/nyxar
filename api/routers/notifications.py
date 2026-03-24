@@ -1,6 +1,7 @@
 """
 API de preferencias de notificación, historial (notifications_log), estadísticas y prueba de canales.
-Si NOTIFY_API_KEY está definida, las mutaciones exigen header X-Notify-Api-Key.
+GET exige JWT (mínimo viewer). PUT/POST exigen operador (o superior) y, si NOTIFY_API_KEY está
+definida, también el header X-Notify-Api-Key.
 """
 
 from __future__ import annotations
@@ -10,6 +11,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
+
+from api.auth.deps import require_operator, require_viewer
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -82,6 +85,14 @@ def _require_write_api_key(x_notify_api_key: Optional[str] = Header(None, alias=
         )
 
 
+async def require_notification_write(
+    _key: None = Depends(_require_write_api_key),
+    _user=Depends(require_operator),
+) -> None:
+    """JWT operador (o superior) más X-Notify-Api-Key si NOTIFY_API_KEY está definida."""
+    return None
+
+
 class SeverityFlags(BaseModel):
     email_enabled: bool = True
     whatsapp_enabled: bool = True
@@ -110,7 +121,7 @@ class TestChannelBody(BaseModel):
     severidad: str = "alta"
 
 
-@router.get("/preferences")
+@router.get("/preferences", dependencies=[Depends(require_viewer)])
 async def get_notification_preferences(pm: PreferencesManager = Depends(get_preferences_manager)):
     effective = await pm.get_global_prefs()
     gdoc = await pm.get_global_document()
@@ -125,7 +136,7 @@ async def get_notification_preferences(pm: PreferencesManager = Depends(get_pref
     )
 
 
-@router.put("/preferences", dependencies=[Depends(_require_write_api_key)])
+@router.put("/preferences", dependencies=[Depends(require_notification_write)])
 async def put_global_notification_preferences(
     body: PrefsBody,
     pm: PreferencesManager = Depends(get_preferences_manager),
@@ -137,7 +148,7 @@ async def put_global_notification_preferences(
     return success_response({"updated": updated})
 
 
-@router.put("/preferences/user/{user_id}", dependencies=[Depends(_require_write_api_key)])
+@router.put("/preferences/user/{user_id}", dependencies=[Depends(require_notification_write)])
 async def put_user_notification_preferences(
     user_id: str,
     body: PrefsBody,
@@ -150,7 +161,7 @@ async def put_user_notification_preferences(
     return success_response({"user_id": user_id, "updated": updated})
 
 
-@router.put("/preferences/area/{area}", dependencies=[Depends(_require_write_api_key)])
+@router.put("/preferences/area/{area}", dependencies=[Depends(require_notification_write)])
 async def put_area_notification_preferences(
     area: str,
     body: PrefsBody,
@@ -163,13 +174,13 @@ async def put_area_notification_preferences(
     return success_response({"area": area, "updated": updated})
 
 
-@router.get("/preferences/user/{user_id}")
+@router.get("/preferences/user/{user_id}", dependencies=[Depends(require_viewer)])
 async def get_user_prefs_snapshot(user_id: str, pm: PreferencesManager = Depends(get_preferences_manager)):
     doc = await pm.get_user_document(user_id)
     return success_response(doc)
 
 
-@router.get("/preferences/effective/{user_id}")
+@router.get("/preferences/effective/{user_id}", dependencies=[Depends(require_viewer)])
 async def get_effective_prefs_for_severity(
     user_id: str,
     severidad: str = Query("media"),
@@ -188,7 +199,7 @@ async def get_effective_prefs_for_severity(
     )
 
 
-@router.get("/log")
+@router.get("/log", dependencies=[Depends(require_viewer)])
 async def list_notifications_log(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -215,7 +226,7 @@ async def list_notifications_log(
     return success_response(rows, total=total)
 
 
-@router.get("/stats")
+@router.get("/stats", dependencies=[Depends(require_viewer)])
 async def notifications_stats():
     await mongo_client.connect()
     await ensure_notifications_log_indexes()
@@ -265,7 +276,7 @@ async def notifications_stats():
     )
 
 
-@router.post("/test", dependencies=[Depends(_require_write_api_key)])
+@router.post("/test", dependencies=[Depends(require_notification_write)])
 async def test_notification_channel(body: TestChannelBody):
     test_email = (os.getenv("NOTIFY_TEST_EMAIL") or "").strip()
     test_wa = (os.getenv("NOTIFY_TEST_WHATSAPP") or "").strip()
@@ -309,12 +320,12 @@ async def test_notification_channel(body: TestChannelBody):
     return success_response({"sent": ok, "canal": body.canal})
 
 
-@router.get("/admins")
+@router.get("/admins", dependencies=[Depends(require_viewer)])
 async def list_notification_admins():
     return success_response([a.model_dump() for a in get_all_admins_from_env()])
 
 
-@router.get("/area/{area}/responsible")
+@router.get("/area/{area}/responsible", dependencies=[Depends(require_viewer)])
 async def get_area_responsible(area: str):
     r = get_area_responsible_from_env(area)
     if not r:

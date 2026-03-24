@@ -3,6 +3,8 @@
  * Base: VITE_API_URL (incluye /api/v1), p. ej. http://localhost:8000/api/v1
  */
 
+import { clearSessionAuth, getAccessToken } from './session'
+
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(
   /\/$/,
   '',
@@ -36,13 +38,19 @@ async function request(endpoint, options = {}) {
  * URL absoluta (p. ej. health fuera de /api/v1).
  */
 async function requestUrl(url, endpointLabel, options = {}) {
-  const { headers: optHeaders, body, ...rest } = options
+  const { headers: optHeaders, body, skipAuth, ...rest } = options
   const headers = {
     ...optHeaders,
   }
   const hasJsonBody = body !== undefined && body !== null
   if (hasJsonBody) {
     headers['Content-Type'] = 'application/json'
+  }
+  if (!skipAuth) {
+    const t = getAccessToken()
+    if (t) {
+      headers.Authorization = `Bearer ${t}`
+    }
   }
 
   const config = {
@@ -74,6 +82,16 @@ async function requestUrl(url, endpointLabel, options = {}) {
     }
 
     if (!response.ok) {
+      if (
+        response.status === 401 &&
+        typeof endpointLabel === 'string' &&
+        !endpointLabel.includes('auth/login')
+      ) {
+        clearSessionAuth()
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('nyxar:session-expired'))
+        }
+      }
       const msg =
         parsed?.error ||
         parsed?.detail ||
@@ -94,6 +112,15 @@ async function requestUrl(url, endpointLabel, options = {}) {
 }
 
 // --- APIs de dominio (rutas relativas a /api/v1) ---
+
+export const authApi = {
+  login: (username, password) =>
+    request('/auth/login', {
+      method: 'POST',
+      body: { username, password },
+      skipAuth: true,
+    }),
+}
 
 export const eventsApi = {
   getAll: (params = {}) => {

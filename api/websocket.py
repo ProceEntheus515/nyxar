@@ -2,7 +2,8 @@ import os
 import json
 import uuid
 import asyncio
-from typing import Dict, List
+from typing import Dict, List, Optional
+from urllib.parse import unquote
 import socketio
 from datetime import datetime, timedelta, timezone
 
@@ -27,8 +28,20 @@ from api.websocket_contract import (
 
 logger = get_logger("api.websocket")
 
-# Socket.IO ASGI Server (Permite CORS, maneja Heartbeats pings de 25s automáticamente)
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins="*")
+
+def _socket_cors_origins() -> List[str]:
+    origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ]
+    prod = (os.getenv("FRONTEND_CORS_URL") or "").strip()
+    if prod:
+        origins.append(prod)
+    return origins
+
+
+# Socket.IO ASGI Server (CORS alineado con la API HTTP)
+sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins=_socket_cors_origins())
 
 # State management
 mongo_client = MongoClient()
@@ -39,16 +52,46 @@ active_tasks = []
 event_queue = asyncio.Queue()
 identity_updates: Dict[str, dict] = {} # buffer de identity risk deltas
 
+def _extract_ws_token(environ: dict, auth: Optional[dict]) -> Optional[str]:
+    if isinstance(auth, dict):
+        t = auth.get("token")
+        if t and isinstance(t, str) and t.strip():
+            return t.strip()
+    qs = (environ.get("QUERY_STRING") or "").strip()
+    if not qs:
+        return None
+    for part in qs.split("&"):
+        if part.startswith("token="):
+            return unquote(part[6:]).strip() or None
+    return None
+
+
 @sio.event
-async def connect(sid, environ):
-    logger.info(f"[WS] Cliente conectado: {sid}")
+async def connect(sid, environ, auth=None):
+    from api.auth.core import verify_token
+
+    token = _extract_ws_token(environ, auth if isinstance(auth, dict) else None)
+    if not token:
+        logger.warning("[WS] conexión rechazada: sin token, sid=%s", sid)
+        return False
+    td = verify_token(token)
+    if not td:
+        logger.warning("[WS] conexión rechazada: token inválido, sid=%s", sid)
+        return False
+
+    logger.info("[WS] Cliente conectado: %s user=%s", sid, td.username)
     try:
         if mongo_client.db is None:
             await mongo_client.connect()
     except Exception as e:
         logger.error("[WS] No se pudo conectar Mongo al conectar cliente: %s", e)
-        return
+        return False
     db = mongo_client.db
+
+    user = await db.users.find_one({"username": td.username})
+    if not user or not user.get("is_active", True):
+        logger.warning("[WS] conexión rechazada: usuario inactivo o inexistente, sid=%s", sid)
+        return False
 
     try:
         # 1. Traer Últimos 10 eventos

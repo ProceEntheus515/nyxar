@@ -283,8 +283,8 @@ class Normalizer:
                 area=area
             ),
             externo=EventoExterno(
-                valor=descripcion[:255], # Límite por Pydantic/diseño
-                tipo="dominio" # Semántico según requerimientos
+                tipo="texto",
+                valor=descripcion[:255],
             )
         )
 
@@ -312,7 +312,7 @@ class Normalizer:
                 area=area
             ),
             externo=EventoExterno(
-                valor=process_name[:255] if process_name else "unknown",
-                tipo="hash" # Semántico local
+                tipo="texto",
+                valor=(process_name[:255] if process_name else "unknown"),
             )
         )

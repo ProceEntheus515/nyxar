@@ -1,11 +1,18 @@
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 
+from api.auth.deps import require_viewer
+from api.validators import (
+    validate_event_id_param,
+    validate_iso_timestamp_bound,
+    validate_mongodb_query,
+)
 from shared.mongo_client import MongoClient
 from api.utils import success_response, error_response
 
-router = APIRouter(prefix="/events", tags=["events"])
+router = APIRouter(prefix="/events", tags=["events"], dependencies=[Depends(require_viewer)])
 mongo_client = MongoClient()
 
 @router.get("/stats")
@@ -54,6 +61,13 @@ async def get_stats():
 
 @router.get("/{event_id}")
 async def get_event(event_id: str):
+    try:
+        validate_event_id_param(event_id)
+    except ValueError as e:
+        return JSONResponse(
+            status_code=400,
+            content=error_response(str(e), "INVALID_EVENT_ID"),
+        )
     doc = await mongo_client.db.events.find_one({"id": event_id})
     if not doc:
         return JSONResponse(status_code=404, content=error_response("Evento no encontrado", "EVENT_NOT_FOUND"))
@@ -62,16 +76,28 @@ async def get_event(event_id: str):
 
 @router.get("/")
 async def list_events(
-    limit: int = Query(50, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
-    source: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0, le=10000),
+    source: Optional[str] = Query(
+        None,
+        pattern="^(dns|proxy|firewall|wazuh|endpoint)$",
+    ),
     desde: Optional[str] = None,
-    hasta: Optional[str] = None
+    hasta: Optional[str] = None,
 ):
-    query = {}
+    try:
+        desde = validate_iso_timestamp_bound(desde)
+        hasta = validate_iso_timestamp_bound(hasta)
+    except ValueError as e:
+        return JSONResponse(
+            status_code=400,
+            content=error_response(str(e), "VALIDATION_ERROR"),
+        )
+
+    query: dict = {}
     if source:
         query["source"] = source
-        
+
     date_filter = {}
     if desde:
         date_filter["$gte"] = desde
@@ -79,7 +105,15 @@ async def list_events(
         date_filter["$lte"] = hasta
     if date_filter:
         query["timestamp"] = date_filter
-        
+
+    try:
+        validate_mongodb_query(query)
+    except ValueError as e:
+        return JSONResponse(
+            status_code=400,
+            content=error_response(str(e), "VALIDATION_ERROR"),
+        )
+
     col = mongo_client.db.events
     total = await col.count_documents(query)
     

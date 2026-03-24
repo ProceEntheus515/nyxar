@@ -4,12 +4,13 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 import anthropic
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
+from api.auth.deps import require_analyst, require_viewer
 from api.utils import success_response, error_response
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -41,7 +42,7 @@ def _shape_memo_for_api(doc: dict) -> dict:
     return out
 
 
-@router.get("/memos")
+@router.get("/memos", dependencies=[Depends(require_viewer)])
 async def list_memos(limit: int = 20, offset: int = 0):
     col = mongo_client.db.ai_memos
     total = await col.count_documents({})
@@ -107,7 +108,7 @@ async def _correr_analisis_claude(incident_id: str, memo_id: str):
     except Exception as e:
         logger.error(f"Análisis IA abortado para {incident_id}: {e}")
 
-@router.post("/analyze/{incident_id}")
+@router.post("/analyze/{incident_id}", dependencies=[Depends(require_analyst)])
 async def analyze_incident(incident_id: str):
     # Verifico que exista
     ext = await mongo_client.db.incidents.find_one({"id": incident_id})
@@ -121,7 +122,7 @@ async def analyze_incident(incident_id: str):
     
     return success_response({"status": "processing", "memo_id": memo_id})
 
-@router.post("/ceo-view")
+@router.post("/ceo-view", dependencies=[Depends(require_viewer)])
 async def generar_ceo_view():
     """Reporte Ejecutivo (Synchronous await)."""
     try:

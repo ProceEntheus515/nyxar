@@ -11,6 +11,9 @@ redis
 prometheus-client
 python-socketio
 pydantic
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt>=4.0.0,<5
 
 # --- collector ---
 watchdog

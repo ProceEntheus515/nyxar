@@ -8,10 +8,11 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
+from api.auth.deps import require_admin, require_operator, require_viewer
 from api.utils import error_response, success_response
 from auto_response.approval import ApprovalManager
 from auto_response.audit import AuditLogger, ensure_audit_log_indexes
@@ -70,7 +71,7 @@ class RejectBody(BaseModel):
     rechazado_by: Optional[str] = None
 
 
-@router.get("/proposals")
+@router.get("/proposals", dependencies=[Depends(require_viewer)])
 async def list_proposals(
     estado: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=500),
@@ -80,14 +81,14 @@ async def list_proposals(
     return success_response(items, total)
 
 
-@router.get("/proposals/pending")
+@router.get("/proposals/pending", dependencies=[Depends(require_viewer)])
 async def list_pending_proposals():
     am = ApprovalManager(mongo_client, None, AuditLogger(mongo_client))
     items = await am.get_pending()
     return success_response(items, len(items))
 
 
-@router.get("/proposals/{proposal_id}")
+@router.get("/proposals/{proposal_id}", dependencies=[Depends(require_viewer)])
 async def get_proposal_detail(proposal_id: str):
     col = mongo_client.db[COL_PROPOSALS]
     doc = await col.find_one({"id": proposal_id})
@@ -106,7 +107,7 @@ async def get_proposal_detail(proposal_id: str):
     return success_response({"proposal": doc, "incident": incident})
 
 
-@router.post("/proposals/{proposal_id}/approve")
+@router.post("/proposals/{proposal_id}/approve", dependencies=[Depends(require_operator)])
 async def approve_proposal(proposal_id: str, body: ApproveBody = ApproveBody()):
     rb = _redis()
     if rb.client is None:
@@ -140,7 +141,7 @@ async def approve_proposal(proposal_id: str, body: ApproveBody = ApproveBody()):
     return success_response(out)
 
 
-@router.post("/proposals/{proposal_id}/reject")
+@router.post("/proposals/{proposal_id}/reject", dependencies=[Depends(require_operator)])
 async def reject_proposal(proposal_id: str, body: RejectBody):
     am = ApprovalManager(mongo_client, None, AuditLogger(mongo_client))
     by = (body.rechazado_by or "").strip() or "api"
@@ -170,14 +171,14 @@ def _parse_audit_dt(q: Optional[str], end_of_day: bool = False) -> Optional[date
         return None
 
 
-@router.get("/audit/trail/{incident_id}")
+@router.get("/audit/trail/{incident_id}", dependencies=[Depends(require_viewer)])
 async def get_audit_trail_by_incident(incident_id: str):
     al = AuditLogger(mongo_client)
     items = await al.get_audit_trail(incident_id)
     return success_response(items, len(items))
 
 
-@router.get("/audit")
+@router.get("/audit", dependencies=[Depends(require_viewer)])
 async def list_audit_log(
     desde: Optional[str] = Query(None),
     hasta: Optional[str] = Query(None),
@@ -204,7 +205,7 @@ async def list_audit_log(
     return success_response(items, total)
 
 
-@router.get("/audit/export")
+@router.get("/audit/export", dependencies=[Depends(require_admin)])
 async def export_audit_log(
     desde: str = Query(..., description="ISO 8601"),
     hasta: str = Query(..., description="ISO 8601"),

@@ -9,6 +9,10 @@ from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
 from shared.heartbeat import heartbeat_loop
+from prompt_defense import (
+    CLAUDE_PROMPT_INJECTION_SYSTEM_PREFIX,
+    PromptInjectionDefense,
+)
 
 logger = get_logger("ai.autonomous")
 
@@ -26,9 +30,10 @@ class AutonomousAnalyst:
         try:
             with open(prompt_path, "r", encoding="utf-8") as f:
                 self.prompt_template = f.read()
-        except:
+        except OSError:
             self.prompt_template = "Contexto: {context}.\nReglas: Respondé JSON."
-            
+        self._prompt_defense = PromptInjectionDefense()
+
     async def run(self) -> None:
         """Loop infinito que corre el análisis cada ANALYSIS_INTERVAL segundos"""
         self._running = True
@@ -50,27 +55,37 @@ class AutonomousAnalyst:
         Formato diseñado para ser informativo pero no desperdiciar tokens.
         Máximo 2000 tokens de contexto.
         """
+        d = self._prompt_defense
         ctx = []
         ctx.append("--- IDENTIDADES DE ALTO RIESGO (>40) ---")
         for i in identidades:
-            ctx.append(f"ID: {i.get('id')} - Score: {i.get('risk_score')} - Area: {i.get('area')}")
-            
+            iid = d.sanitize_plain_text(str(i.get("id") or ""), "identity.id", 120)
+            area = d.sanitize_plain_text(str(i.get("area") or ""), "identity.area", 80)
+            score = i.get("risk_score", "N/A")
+            ctx.append(f"ID: {iid} - Score: {score} - Area: {area}")
+
         ctx.append("\n--- INCIDENTES ACTIVOS ---")
         for inc in incidentes:
-            ctx.append(f"Incidente: {inc.get('id')} - Severidad: {inc.get('severidad')} - Afectado: {inc.get('host_afectado')} - Técnica: {inc.get('mitre_technique')}")
-            
+            inc_id = d.sanitize_plain_text(str(inc.get("id") or ""), "incident.id", 120)
+            sev = d.sanitize_plain_text(str(inc.get("severidad") or ""), "incident.severidad", 32)
+            host = d.sanitize_plain_text(str(inc.get("host_afectado") or ""), "incident.host", 120)
+            tech = d.sanitize_plain_text(str(inc.get("mitre_technique") or ""), "incident.mitre", 80)
+            ctx.append(
+                f"Incidente: {inc_id} - Severidad: {sev} - Afectado: {host} - Técnica: {tech}"
+            )
+
         ctx.append("\n--- HONEYPOT HITS (24H) ---")
         ctx.append(f"Total Honeypot Hits detectados intrusión: {honeypots}")
-        
-        ctx.append("\n--- MUESTRA DE ACTIVIDAD RECIENTE (Ultimos 5 min) ---")
-        for e in eventos[:50]: # Un subset pequeño para no explotar tokens
-            src = e.get('interno', {}).get('ip') or e.get('interno', {}).get('id_usuario')
-            dst = e.get('externo', {}).get('valor')
-            # Solo eventos anómalos o de riesgo
-            if e.get("enrichment", {}).get("risk_score", 0) > 30:
-                ctx.append(f"[{e.get('timestamp')}] {src} -> {dst} (Riesgo: {e.get('enrichment',{}).get('risk_score', 0)})")
-            
-        return "\n".join(ctx)[:8000] # Safe substring approx 2000 tokens
+
+        filtrados = [
+            e
+            for e in eventos[:200]
+            if e.get("enrichment", {}).get("risk_score", 0) > 30
+        ][:50]
+        ctx.append("\n--- MUESTRA DE ACTIVIDAD RECIENTE (ultimos 15 min, riesgo >30) ---")
+        ctx.append(d.build_safe_context(filtrados))
+
+        return "\n".join(ctx)[:8000]
 
     async def analyze_current_state(self) -> None:
         """
@@ -105,6 +120,7 @@ class AutonomousAnalyst:
                 model=self.model,
                 max_tokens=600,
                 temperature=0.3,
+                system=CLAUDE_PROMPT_INJECTION_SYSTEM_PREFIX,
                 messages=[{"role": "user", "content": prompt_filled}],
             )
             raw = resp.content[0].text if resp.content else "{}"

@@ -1,9 +1,11 @@
 from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
+from api.auth.deps import require_operator, require_viewer
+from api.validators import validate_resource_path_id
 from shared.mongo_client import MongoClient
 from api.utils import success_response, error_response
 
@@ -13,7 +15,7 @@ mongo_client = MongoClient()
 class EstadoUpdate(BaseModel):
     estado: str
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(require_viewer)])
 async def list_incidents(
     limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
@@ -38,8 +40,15 @@ async def list_incidents(
         
     return success_response(incidents, total)
 
-@router.get("/{incident_id}")
+@router.get("/{incident_id}", dependencies=[Depends(require_viewer)])
 async def get_incident(incident_id: str):
+    try:
+        validate_resource_path_id(incident_id)
+    except ValueError as e:
+        return JSONResponse(
+            status_code=400,
+            content=error_response(str(e), "VALIDATION_ERROR"),
+        )
     doc = await mongo_client.db.incidents.find_one({"id": incident_id})
     if not doc:
         return JSONResponse(status_code=404, content=error_response("Incidente no encontrado", "NOT_FOUND"))
@@ -81,8 +90,15 @@ async def get_incident(incident_id: str):
             
     return success_response(doc)
 
-@router.post("/{incident_id}/estado")
+@router.post("/{incident_id}/estado", dependencies=[Depends(require_operator)])
 async def set_incident_estado(incident_id: str, payload: EstadoUpdate):
+    try:
+        validate_resource_path_id(incident_id)
+    except ValueError as e:
+        return JSONResponse(
+            status_code=400,
+            content=error_response(str(e), "VALIDATION_ERROR"),
+        )
     estados_validos = ["investigando", "cerrado", "falso_positivo", "abierto"]
     if payload.estado not in estados_validos:
         return JSONResponse(status_code=400, content=error_response("Estado inválido", "BAD_REQUEST"))

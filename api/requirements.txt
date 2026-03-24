@@ -5,3 +5,6 @@ redis
 python-socketio
 pydantic
 httpx
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt>=4.0.0,<5

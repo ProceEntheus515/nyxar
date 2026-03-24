@@ -4,9 +4,11 @@ from contextlib import asynccontextmanager
 from typing import Dict, Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 
+from api.middleware.cors import configure_cors
+from api.middleware.request_size import RequestSizeLimitMiddleware
+from api.middleware.security import SecurityMiddleware
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
@@ -14,7 +16,9 @@ from shared.heartbeat import heartbeat_loop
 
 # Routers
 from api.routers import events, identities, incidents, alerts, simulator, ai, response, response_proposals, hunting, notifications
+from api.routers.auth import router as auth_router
 from api.routers.health import router as health_router
+from api.auth.bootstrap import ensure_auth_startup
 from api.routers.identity import router as identity_router, ensure_nyxar_start_time
 from api.routers.response import ensure_response_audit_indexes
 from api.routers.hunting import ensure_hunting_indexes
@@ -36,6 +40,7 @@ async def lifespan(app: FastAPI):
     app.state.mongo_client = mongo_client
     await ensure_response_audit_indexes()
     await ensure_hunting_indexes()
+    await ensure_auth_startup(mongo_client)
     logger.info("Conexiones de API a Redis y MongoDB establecidas.")
 
     async def approval_expire_poll() -> None:
@@ -75,22 +80,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Middleware
-origins = [
-    "http://localhost:3000",
-    "http://localhost:5173"
-]
-prod_cors = os.getenv("FRONTEND_CORS_URL")
-if prod_cors:
-    origins.append(prod_cors)
-    
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# S02: CORS estricto, cabeceras de seguridad, límite de tamaño (orden: último = más externo)
+configure_cors(app)
+app.add_middleware(SecurityMiddleware)
+app.add_middleware(RequestSizeLimitMiddleware)
 
 # Exception Handler custom de fallback estandarizado
 @app.exception_handler(Exception)
@@ -108,6 +101,7 @@ async def custom_exception_handler(request: Request, exc: Exception):
 # Routers inclusions
 from api.websocket import socket_app
 
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(events.router, prefix="/api/v1")
 app.include_router(identity_router, prefix="/api/v1")
 app.include_router(identities.router, prefix="/api/v1")

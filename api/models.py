@@ -1,8 +1,17 @@
 import uuid
-import ipaddress
 from datetime import datetime, timezone
 from typing import Literal, Optional, List
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, ValidationInfo
+
+from api.validators import (
+    USERNAME_PATTERN,
+    normalize_domain_strip_port,
+    validate_externo_hash,
+    validate_externo_texto,
+    validate_externo_url,
+    validate_ip,
+    validate_no_path_traversal,
+)
 
 # --- CONSTANTES Y FUNCIONES GLOBALES ---
 
@@ -34,18 +43,42 @@ class EventoInterno(BaseModel):
     usuario: str
     area: str
 
-    @field_validator('ip')
+    @field_validator("ip")
     @classmethod
-    def validar_ipv4(cls, v: str) -> str:
-        try:
-            ipaddress.IPv4Address(v)
-        except ValueError:
-            raise ValueError(f"Formato IPv4 inválido para ip interna: {v}")
-        return v
+    def validar_ip_interna(cls, v: str) -> str:
+        return validate_ip(v)
+
+    @field_validator("hostname", "usuario", "area")
+    @classmethod
+    def validar_texto_interno(cls, v: str) -> str:
+        s = (v or "").strip()
+        s = validate_no_path_traversal(s)
+        if len(s) > 256:
+            raise ValueError("Campo interno demasiado largo")
+        return s
+
 
 class EventoExterno(BaseModel):
+    """tipo antes de valor para que el validador de valor conozca el tipo (Pydantic v2)."""
+
+    tipo: Literal["ip", "dominio", "url", "hash", "texto"]
     valor: str
-    tipo: Literal["ip", "dominio", "url", "hash"]
+
+    @field_validator("valor")
+    @classmethod
+    def validar_valor_externo(cls, v: str, info: ValidationInfo) -> str:
+        tipo = info.data.get("tipo")
+        if tipo == "ip":
+            return validate_ip(v)
+        if tipo == "dominio":
+            return normalize_domain_strip_port(v)
+        if tipo == "hash":
+            return validate_externo_hash(v)
+        if tipo == "url":
+            return validate_externo_url(v)
+        if tipo == "texto":
+            return validate_externo_texto(v, max_len=512)
+        return v
 
 class Enrichment(BaseModel):
     reputacion: Literal["limpio", "sospechoso", "malicioso", "desconocido"]
@@ -128,6 +161,22 @@ class Identidad(BaseModel):
     baseline: Optional[BaselineData] = None
     risk_score_actual: int = 0
     ultima_actividad: Optional[datetime] = None
+
+    @field_validator("usuario")
+    @classmethod
+    def validar_usuario_identidad(cls, v: str) -> str:
+        s = (v or "").strip()
+        if not USERNAME_PATTERN.match(s):
+            raise ValueError(f"Username inválido: {v}")
+        return s.lower()
+
+    @field_validator("id", "area", "dispositivo", "hostname")
+    @classmethod
+    def validar_identidad_texto(cls, v: str) -> str:
+        s = validate_no_path_traversal((v or "").strip())
+        if len(s) > 256:
+            raise ValueError("Campo de identidad demasiado largo")
+        return s
 
 class Incidente(BaseModel):
     id: str

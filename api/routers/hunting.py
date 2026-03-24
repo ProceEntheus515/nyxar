@@ -6,10 +6,11 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from api.auth.deps import require_analyst, require_viewer
 from api.utils import error_response, success_response
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
@@ -41,7 +42,7 @@ class ManualHypothesisBody(BaseModel):
     hunter: str = Field(default="analista_manual", max_length=200)
 
 
-@router.get("/hypotheses")
+@router.get("/hypotheses", dependencies=[Depends(require_viewer)])
 async def list_hypotheses(limit: int = 50, offset: int = 0):
     q = {"estado": {"$in": ["nueva", "investigando", "confirmada"]}}
     col = mongo_client.db[HYPOTHESES_COLLECTION]
@@ -59,7 +60,7 @@ async def list_hypotheses(limit: int = 50, offset: int = 0):
     return success_response(items, total)
 
 
-@router.post("/hypotheses")
+@router.post("/hypotheses", dependencies=[Depends(require_analyst)])
 async def create_hypothesis_manual(body: ManualHypothesisBody):
     engine = HypothesisEngine(mongo=mongo_client)
     hyp = await engine.formalize_manual_hypothesis(
@@ -77,7 +78,7 @@ async def create_hypothesis_manual(body: ManualHypothesisBody):
     return success_response(hyp.model_dump(mode="json"))
 
 
-@router.post("/hypotheses/{hypothesis_id}/run")
+@router.post("/hypotheses/{hypothesis_id}/run", dependencies=[Depends(require_analyst)])
 async def run_hunt_for_hypothesis(
     hypothesis_id: str,
     iniciado_by: str = "api_analista",
@@ -95,14 +96,14 @@ async def run_hunt_for_hypothesis(
     return success_response(session.model_dump(mode="json"))
 
 
-@router.get("/sessions")
+@router.get("/sessions", dependencies=[Depends(require_viewer)])
 async def list_hunt_sessions(estado: Optional[str] = None, limit: int = 20):
     hunter = Hunter(mongo=mongo_client)
     rows = await hunter.get_sessions(estado=estado, limit=limit)
     return success_response(rows, len(rows))
 
 
-@router.get("/sessions/{session_id}")
+@router.get("/sessions/{session_id}", dependencies=[Depends(require_viewer)])
 async def get_hunt_session(session_id: str):
     hunter = Hunter(mongo=mongo_client)
     sess = await hunter.get_session_by_id(session_id)

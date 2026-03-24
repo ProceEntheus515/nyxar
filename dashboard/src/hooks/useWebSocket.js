@@ -9,7 +9,7 @@ import { showToast } from '../lib/toastBus';
  */
 const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
 
-export function useWebSocket() {
+export function useWebSocket(accessToken) {
   const {
     addEvent,
     addEventBatch,
@@ -25,7 +25,12 @@ export function useWebSocket() {
   } = useStore();
 
   useEffect(() => {
+    if (!accessToken) {
+      return undefined;
+    }
+
     const socket = io(WS_URL, {
+      auth: { token: accessToken },
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: Infinity,
@@ -137,5 +142,5 @@ export function useWebSocket() {
       socket.removeAllListeners();
       socket.disconnect();
     };
-  }, []);
+  }, [accessToken]);
 }

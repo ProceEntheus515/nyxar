@@ -5,12 +5,14 @@
  *   node scripts/verify_websocket.js
  *
  * Variables: WS_URL (default http://localhost:8000)
+ * Requiere JWT: WS_TOKEN (mismo valor que access_token de POST /api/v1/auth/login).
  */
 
 const path = require('path');
 const { io } = require(path.join(__dirname, '..', 'dashboard', 'node_modules', 'socket.io-client'));
 
 const WS_URL = process.env.WS_URL || 'http://localhost:8000';
+const WS_TOKEN = (process.env.WS_TOKEN || '').trim();
 const TIMEOUT_MS = Number(process.env.WS_VERIFY_TIMEOUT_MS || 15000);
 
 const EXPECTED_EVENTS = ['new_event', 'stats_update'];
@@ -20,7 +22,13 @@ const received = {};
 console.log('=== Verificando WebSocket Server ===\n');
 console.log(`Conectando a ${WS_URL} ...\n`);
 
+if (!WS_TOKEN) {
+  console.error('[FAIL] Definí WS_TOKEN con un JWT válido (login en /api/v1/auth/login).');
+  process.exit(1);
+}
+
 const socket = io(WS_URL, {
+  auth: { token: WS_TOKEN },
   transports: ['websocket', 'polling'],
   reconnection: false,
 });

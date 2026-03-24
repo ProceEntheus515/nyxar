@@ -2,6 +2,7 @@
 Verificación I12: colección response_proposals, API GET /response/proposals y Redis accesible.
 Uso: python scripts/verify_response_flow.py
 Variables: MONGO_URL o MONGODB_URL, REDIS_URL, API_BASE (default http://localhost:8000/api/v1).
+Opcional: NYXAR_ACCESS_TOKEN (JWT de POST /api/v1/auth/login) para GET /response/proposals.
 """
 
 from __future__ import annotations
@@ -48,7 +49,9 @@ async def main() -> None:
             print(f"[WARN] Redis: {e}")
 
         url = f"{api_base}/response/proposals"
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        token = (os.environ.get("NYXAR_ACCESS_TOKEN") or "").strip()
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
             try:
                 resp = await client.get(url)
                 if resp.status_code == 200:

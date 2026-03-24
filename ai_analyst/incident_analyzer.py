@@ -7,6 +7,10 @@ import anthropic
 
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
+from prompt_defense import (
+    CLAUDE_PROMPT_INJECTION_SYSTEM_PREFIX,
+    PromptInjectionDefense,
+)
 
 logger = get_logger("ai.incident_analyzer")
 
@@ -23,6 +27,7 @@ class IncidentAnalyzer:
         except Exception:
             self.prompt_template = "Incident: {incident}\nBaseline: {baseline}\nHistory: {history}\nAnalyze json."
             logger.warning("No se encontró incident.txt, usando fallback")
+        self._prompt_defense = PromptInjectionDefense()
 
     async def analyze(self, incident_id: str) -> dict:
         """
@@ -52,10 +57,22 @@ class IncidentAnalyzer:
         }).sort("timestamp", -1).limit(100)  # limitamos a 100 para no reventar tokens
         historia_eventos = await historia_cursor.to_list(100)
         
-        # Ensamblar strings para contexto
-        inc_str = json.dumps(inc, default=str, ensure_ascii=False)
-        base_str = json.dumps(baseline, default=str, ensure_ascii=False)
-        hist_str = "\n".join([f"[{e.get('timestamp')}] {e.get('source')} - {e.get('externo', {}).get('valor')}" for e in historia_eventos])
+        # Ensamblar strings para contexto (sin datos externos crudos en el prompt)
+        d = self._prompt_defense
+        inc_san = d.sanitize_document_for_llm(inc, "incident")
+        base_san = d.sanitize_document_for_llm(baseline, "baseline")
+        inc_str = json.dumps(inc_san, default=str, ensure_ascii=False)
+        base_str = json.dumps(base_san, default=str, ensure_ascii=False)
+        hist_lines = []
+        for idx, e in enumerate(historia_eventos):
+            ts = d.sanitize_plain_text(str(e.get("timestamp") or ""), f"hist[{idx}].ts", 48)
+            src = d.sanitize_plain_text(str(e.get("source") or ""), f"hist[{idx}].source", 48)
+            ext = e.get("externo") or {}
+            val = d.sanitize_plain_text(
+                str(ext.get("valor") if isinstance(ext, dict) else ""), f"hist[{idx}].valor", 200
+            )
+            hist_lines.append(f"[{ts}] {src} - {val}")
+        hist_str = "\n".join(hist_lines)
         
         prompt_filled = self.prompt_template.format(
             incident=inc_str, 
@@ -80,7 +97,8 @@ class IncidentAnalyzer:
                 model=self.model,
                 max_tokens=1000,
                 temperature=0.1,
-                messages=[{"role": "user", "content": prompt_filled}]
+                system=CLAUDE_PROMPT_INJECTION_SYSTEM_PREFIX,
+                messages=[{"role": "user", "content": prompt_filled}],
             )
             raw_res = resp.content[0].text if resp.content else "{}"
             

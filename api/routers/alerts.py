@@ -1,11 +1,12 @@
 from typing import List
 from datetime import datetime, timezone
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from api.auth.deps import require_viewer
 from shared.mongo_client import MongoClient
 from api.utils import success_response, error_response
 
-router = APIRouter(prefix="/alerts", tags=["alerts"])
+router = APIRouter(prefix="/alerts", tags=["alerts"], dependencies=[Depends(require_viewer)])
 mongo_client = MongoClient()
 
 @router.get("/honeypots")

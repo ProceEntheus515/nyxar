@@ -1,19 +1,26 @@
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
+from api.auth.deps import require_viewer
+from api.validators import validate_resource_path_id
 from shared.mongo_client import MongoClient
 from api.utils import success_response, error_response
 
-router = APIRouter(prefix="/identities", tags=["identities"])
+router = APIRouter(prefix="/identities", tags=["identities"], dependencies=[Depends(require_viewer)])
 mongo_client = MongoClient()
 
 @router.get("/")
 async def list_identities(
-    limit: int = Query(50, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
-    area: Optional[str] = None
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0, le=10000),
+    area: Optional[str] = Query(
+        None,
+        min_length=1,
+        max_length=50,
+        pattern=r"^[a-zA-Z0-9_-]+$",
+    ),
 ):
     query = {}
     if area:
@@ -32,6 +39,13 @@ async def list_identities(
 
 @router.get("/{identidad_id}")
 async def get_identity(identidad_id: str):
+    try:
+        validate_resource_path_id(identidad_id)
+    except ValueError as e:
+        return JSONResponse(
+            status_code=400,
+            content=error_response(str(e), "VALIDATION_ERROR"),
+        )
     col = mongo_client.db.identities
     doc = await col.find_one({"id": identidad_id})
     if not doc:
@@ -59,6 +73,13 @@ async def get_identity(identidad_id: str):
 
 @router.get("/{identidad_id}/timeline")
 async def identity_timeline(identidad_id: str, limit: int = Query(100, le=500)):
+    try:
+        validate_resource_path_id(identidad_id)
+    except ValueError as e:
+        return JSONResponse(
+            status_code=400,
+            content=error_response(str(e), "VALIDATION_ERROR"),
+        )
     # Los ultimos 100 eventos ordenados por timestamp
     q_evts = {
         "$or": [

@@ -2,9 +2,10 @@ import os
 import json
 import uuid
 import asyncio
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from api.auth.deps import require_admin, require_viewer
 from api.utils import success_response, error_response
 from shared.redis_bus import RedisBus
 from shared.logger import get_logger
@@ -25,7 +26,7 @@ class ScenarioRequest(BaseModel):
     target: str
     intensity: str
 
-@router.post("/scenario")
+@router.post("/scenario", dependencies=[Depends(require_admin)])
 async def start_scenario(req: ScenarioRequest):
     if not run_scenario or req.scenario not in SCENARIOS:
         raise HTTPException(400, "Scenario engine no cargado o no existe")
@@ -53,7 +54,7 @@ async def start_scenario(req: ScenarioRequest):
         logger.error(f"Error parseando escenarios locales en API: {e}")
         raise HTTPException(500, "Internal API error")
 
-@router.get("/status")
+@router.get("/status", dependencies=[Depends(require_viewer)])
 async def simulator_status():
     r = redis_bus.client
     if not r:

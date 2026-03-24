@@ -4,9 +4,10 @@ Alias /api/v1/response-proposals/* hacia la logica de api.routers.response.
 
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
+from api.auth.deps import require_operator, require_viewer
 from api.routers import response as response_mod
 from api.utils import success_response
 
@@ -23,7 +24,7 @@ class RejectBody(BaseModel):
     rechazado_by: Optional[str] = None
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(require_viewer)])
 async def list_response_proposals(
     estado: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=500),
@@ -33,7 +34,7 @@ async def list_response_proposals(
     return success_response(items, total)
 
 
-@router.post("/{proposal_id}/approve")
+@router.post("/{proposal_id}/approve", dependencies=[Depends(require_operator)])
 async def approve_response_proposal(
     proposal_id: str,
     body: ApproveBody = ApproveBody(),
@@ -47,7 +48,7 @@ async def approve_response_proposal(
     )
 
 
-@router.post("/{proposal_id}/reject")
+@router.post("/{proposal_id}/reject", dependencies=[Depends(require_operator)])
 async def reject_response_proposal(proposal_id: str, body: RejectBody):
     motivo = body.comentario
     return await response_mod.reject_proposal(

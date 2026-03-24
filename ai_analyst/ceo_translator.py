@@ -7,6 +7,10 @@ import anthropic
 
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
+from prompt_defense import (
+    CLAUDE_PROMPT_INJECTION_SYSTEM_PREFIX,
+    PromptInjectionDefense,
+)
 
 logger = get_logger("ai.ceo_translator")
 
@@ -22,6 +26,7 @@ class CeoTranslator:
         except Exception:
             self.prompt_template = "Estadísticas: {context}. Genera un JSON {'titulo':'x', 'resumen':'y', 'acciones':'z'}."
             logger.warning("No se encontró ceo_view.txt, usando fallback inline")
+        self._prompt_defense = PromptInjectionDefense()
 
     async def _gather_context(self) -> str:
         db = self.mongo.db
@@ -36,11 +41,15 @@ class CeoTranslator:
         ayer = (datetime.now(timezone.utc).timestamp() - 86400)
         hits = await db.honeypot_hits.count_documents({"timestamp": {"$gte": datetime.fromtimestamp(ayer, timezone.utc).isoformat()}})
         
+        d = self._prompt_defense
         ctx = []
         ctx.append(f"- Incidentes Críticos/Altos activos: {len(crit_abiertos)}")
         if crit_abiertos:
-            cats = [i.get('mitre_technique', 'N/A') for i in crit_abiertos]
-            ctx.append(f"- Tipo de técnicas bajo ataque: {', '.join(set(cats))}")
+            cats = [str(i.get("mitre_technique", "N/A") or "") for i in crit_abiertos]
+            cats_join = d.sanitize_plain_text(
+                ", ".join(sorted(set(cats))), "ceo.mitre_techniques", 500
+            )
+            ctx.append(f"- Tipo de técnicas bajo ataque: {cats_join}")
         
         ctx.append(f"- Identidades en Riesgo Alto (>40): {len(top_risk)}")
         ctx.append(f"- Alarmas silenciosas (Honeypots) disparadas en ultimas 24h: {hits}")
@@ -81,7 +90,8 @@ class CeoTranslator:
                 model="claude-sonnet-4-20250514",
                 max_tokens=600,
                 temperature=0.2,
-                messages=[{"role": "user", "content": prompt_filled}]
+                system=CLAUDE_PROMPT_INJECTION_SYSTEM_PREFIX,
+                messages=[{"role": "user", "content": prompt_filled}],
             )
             
             raw_res = resp.content[0].text if resp.content else "{}"
