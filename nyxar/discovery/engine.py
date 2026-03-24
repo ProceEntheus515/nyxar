@@ -95,6 +95,11 @@ def _infra_from_json(data: dict[str, Any]) -> InfrastructureMap:
     return InfrastructureMap(**merged)
 
 
+def infrastructure_map_from_dict(data: dict[str, Any]) -> InfrastructureMap:
+    """Rehidrata un mapa desde JSON (snapshots, API)."""
+    return _infra_from_json(data)
+
+
 class DiscoveryEngine:
     """
     Orquesta probes en paralelo; un fallo no aborta el resto.
