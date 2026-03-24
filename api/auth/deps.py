@@ -8,6 +8,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 
+from api.auth.audit import check_brute_force, log_security_event
 from api.auth.core import mongo_user_to_model, verify_api_key, verify_token
 from api.auth.models import User
 from api.auth.roles import ROLE_HIERARCHY, Role
@@ -67,8 +68,30 @@ async def get_current_user(
 
 
 def require_role(minimum_role: str):
-    async def role_checker(user: User = Depends(get_current_user)) -> User:
+    async def role_checker(
+        request: Request,
+        user: User = Depends(get_current_user),
+        db=Depends(get_db),
+    ) -> User:
         if ROLE_HIERARCHY.get(user.role, 0) < ROLE_HIERARCHY.get(minimum_role, 0):
+            redis_bus = getattr(request.app.state, "redis_bus", None)
+            redis_client = getattr(redis_bus, "client", None) if redis_bus else None
+            await log_security_event(
+                "permission_denied",
+                user.username,
+                request=request,
+                extra={"required_role": minimum_role, "actual_role": user.role},
+                db=db,
+                redis_bus=redis_bus,
+            )
+            await check_brute_force(
+                user.username,
+                "permission_denied",
+                redis_client,
+                db=db,
+                request=request,
+                redis_bus=redis_bus,
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Se requiere rol '{minimum_role}' o superior",

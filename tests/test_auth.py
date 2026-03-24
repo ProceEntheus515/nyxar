@@ -53,3 +53,29 @@ def test_jwt_rejects_garbage():
 
 def test_role_hierarchy_ordering():
     assert ROLE_HIERARCHY[Role.VIEWER] < ROLE_HIERARCHY[Role.ADMIN]
+
+
+def test_audit_get_severity():
+    from api.auth import audit as audit_mod
+
+    assert audit_mod._get_severity("prompt_injection_detected") == "critical"
+    assert audit_mod._get_severity("login_failure_repeated") == "critical"
+    assert audit_mod._get_severity("api_key_revoked") == "high"
+    assert audit_mod._get_severity("login_failure") == "medium"
+    assert audit_mod._get_severity("login_success") == "info"
+
+
+def test_audit_sanitize_extra_strips_secrets():
+    from api.auth import audit as audit_mod
+
+    raw = {
+        "password": "x",
+        "access_token": "t",
+        "nested": {"secret": "s"},
+        "safe": 1,
+    }
+    out = audit_mod._sanitize_extra(raw)
+    assert "password" not in out
+    assert "access_token" not in out
+    assert out.get("safe") == 1
+    assert "secret" not in (out.get("nested") or {})

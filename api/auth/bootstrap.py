@@ -6,6 +6,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 
+from api.auth.audit import SECURITY_AUDIT_COLLECTION
 from api.auth.core import hash_password, validate_jwt_config
 from api.auth.roles import Role
 from shared.logger import get_logger
@@ -31,6 +32,10 @@ async def ensure_auth_startup(mongo_client) -> None:
         await db[API_KEYS_COLLECTION].create_index("key_hash", unique=True)
     except Exception as e:
         logger.warning("api_keys index key_hash: %s", e)
+    try:
+        await db[SECURITY_AUDIT_COLLECTION].create_index([("timestamp", -1)])
+    except Exception as e:
+        logger.warning("security_audit_log index timestamp: %s", e)
 
     admin_count = await db[USERS_COLLECTION].count_documents(
         {"role": Role.ADMIN, "is_active": True}

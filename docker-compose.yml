@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.9'
 
 networks:
   nyxar-net:
@@ -65,6 +65,23 @@ services:
         aliases:
           - mongo
 
+  # One-shot: genera .nyxar_infrastructure_map.json antes del collector.
+  # En Windows, crear antes un archivo JSON valido en la raiz del repo (p. ej. {}).
+  discovery:
+    build:
+      context: .
+      dockerfile: nyxar/discovery/Dockerfile
+    env_file: .env
+    environment:
+      NETWORK_RANGE: ${NETWORK_RANGE:-auto}
+      NYXAR_INFRA_MAP_PATH: /app/.nyxar_infrastructure_map.json
+    volumes:
+      - ./.nyxar_infrastructure_map.json:/app/.nyxar_infrastructure_map.json
+      - /var/log:/host/logs:ro
+    networks:
+      - nyxar-net
+    restart: "no"
+
   pihole:
     image: pihole/pihole:latest
     restart: unless-stopped
@@ -82,6 +99,8 @@ services:
     build: ./collector
     restart: unless-stopped
     depends_on:
+      discovery:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       mongodb:

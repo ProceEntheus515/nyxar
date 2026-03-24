@@ -94,6 +94,24 @@ app.add_middleware(SlowAPIMiddleware)
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     retry_after = 60
+    try:
+        from api.auth.audit import log_security_event
+
+        mongo = getattr(request.app.state, "mongo_client", None)
+        redis_bus = getattr(request.app.state, "redis_bus", None)
+        db = mongo.db if mongo else None
+        if db is not None:
+            await log_security_event(
+                "rate_limit_exceeded",
+                "anonymous",
+                request=request,
+                extra={"path": request.url.path},
+                db=db,
+                redis_bus=redis_bus,
+            )
+    except Exception as e:
+        logger.warning("rate_limit audit log failed: %s", e)
+
     resp = JSONResponse(
         status_code=429,
         content={

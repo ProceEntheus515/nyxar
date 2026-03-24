@@ -6,7 +6,11 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from api.auth.audit import log_security_event
+from api.auth.audit import (
+    check_brute_force,
+    clear_brute_force_counter,
+    log_security_event,
+)
 from api.auth.core import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     create_access_token,
@@ -23,10 +27,23 @@ from api.middleware.rate_limit import limiter
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _redis_from_request(request: Request):
+    rb = getattr(request.app.state, "redis_bus", None)
+    return getattr(rb, "client", None) if rb else None
+
+
+def _redis_bus_from_request(request: Request):
+    return getattr(request.app.state, "redis_bus", None)
+
+
 @router.post("/login")
 @limiter.limit("5/minute", override_defaults=False)
 async def login(credentials: LoginRequest, request: Request, db=Depends(get_db)) -> dict:
-    user = await db.users.find_one({"username": credentials.username.strip()})
+    actor = credentials.username.strip() or "unknown"
+    redis_client = _redis_from_request(request)
+    redis_bus = _redis_bus_from_request(request)
+
+    user = await db.users.find_one({"username": actor})
     stored_hash = (
         user.get("password_hash", dummy_password_hash())
         if user
@@ -35,12 +52,39 @@ async def login(credentials: LoginRequest, request: Request, db=Depends(get_db))
     password_valid = verify_password(credentials.password, stored_hash)
 
     if not user or not password_valid or not user.get("is_active", True):
+        await log_security_event(
+            "login_failure",
+            actor,
+            request=request,
+            db=db,
+            redis_bus=redis_bus,
+        )
+        if await check_brute_force(
+            actor,
+            "login_failure",
+            redis_client,
+            db=db,
+            request=request,
+            redis_bus=redis_bus,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Demasiados intentos fallidos",
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales inválidas",
         )
 
-    await log_security_event(db, "login_success", user["username"], request)
+    await clear_brute_force_counter(actor, "login_failure", redis_client)
+
+    await log_security_event(
+        "login_success",
+        user["username"],
+        request=request,
+        db=db,
+        redis_bus=redis_bus,
+    )
 
     await db.users.update_one(
         {"_id": user["_id"]},
@@ -88,11 +132,12 @@ async def create_api_key(
     )
 
     await log_security_event(
-        db,
         "api_key_created",
         current_user.username,
-        request,
+        request=request,
         extra={"key_name": body.name, "role": body.role},
+        db=db,
+        redis_bus=_redis_bus_from_request(request),
     )
 
     return {

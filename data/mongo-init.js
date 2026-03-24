@@ -44,3 +44,7 @@ db.ai_memos.createIndex({ "prioridad": 1 })
 // Honeypot hits — sin TTL, retener siempre como evidencia
 db.createCollection("honeypot_hits")
 db.honeypot_hits.createIndex({ "timestamp": -1 })
+
+// S13: audit de seguridad del producto (append-only por convención; sin rutas de borrado en API)
+db.createCollection("security_audit_log")
+db.security_audit_log.createIndex({ "timestamp": -1 })
