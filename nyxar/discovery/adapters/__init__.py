@@ -10,11 +10,12 @@ from nyxar.discovery.adapters.firewall_adapter import (
 )
 from nyxar.discovery.adapters.proxy_adapter import ProxyAdapter, suggest_proxy_env
 from nyxar.discovery.adapters.siem_adapter import suggest_siem_env
-from nyxar.discovery.adapters.tls_adapter import suggest_tls_env
+from nyxar.discovery.adapters.tls_adapter import TlsAdapter, suggest_tls_env
 
 __all__ = [
     "DnsAdapter",
     "ProxyAdapter",
+    "TlsAdapter",
     "SyslogReceiver",
     "generate_firewall_config_instructions",
     "suggest_dns_env",

@@ -137,22 +137,27 @@ class DiscoveryEngine:
         from nyxar.discovery.probes.tls_probe import TlsProbe
         from nyxar.discovery.probes.siem_probe import SiemProbe
 
-        probes = [
+        # TLS despues de Proxy para que infra.proxy_* este relleno (inspeccion CONNECT).
+        probes_p1 = [
             DnsProbe(infra).run(),
             ProxyProbe(infra).run(),
             FirewallProbe(infra).run(),
             WazuhProbe(infra).run(),
-            TlsProbe(infra).run(),
             SiemProbe(infra).run(),
         ]
-
-        results = await asyncio.gather(*probes, return_exceptions=True)
-        probe_names = ("DNS", "Proxy", "Firewall", "Wazuh", "TLS", "SIEM")
+        names_p1 = ("DNS", "Proxy", "Firewall", "Wazuh", "SIEM")
+        results = await asyncio.gather(*probes_p1, return_exceptions=True)
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.warning("Probe %s: %s", probe_names[i], result)
+                logger.warning("Probe %s: %s", names_p1[i], result)
                 if verbose:
-                    print(f"  [WARN] Probe {probe_names[i]}: {result}")
+                    print(f"  [WARN] Probe {names_p1[i]}: {result}")
+
+        tls_res = await asyncio.gather(TlsProbe(infra).run(), return_exceptions=True)
+        if isinstance(tls_res[0], Exception):
+            logger.warning("Probe TLS: %s", tls_res[0])
+            if verbose:
+                print(f"  [WARN] Probe TLS: {tls_res[0]}")
 
         infra.confidence = self._calculate_confidence(infra)
         self._save_map(infra)
