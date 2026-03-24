@@ -102,33 +102,37 @@ class TrafficGenerator:
 
     async def _emit_dns_event(self, persona: dict, dominio: str, force_blocked: bool = False) -> None:
         """
-        Genera evento DNS y publica en Redis como si lo emitiera dns_parser.
+        Genera log DNS crudo (como dns_parser) y publica en events:raw el Evento normalizado (I01/I16).
+
+        En laboratorio no hay archivo de log físico: el raw se construye aquí y el Normalizer
+        produce el mismo contrato que el collector. En producción el collector lee el fichero y normaliza.
         """
         now = self._simulated_now()
-        
+
         # Ruido humano: ±30 segundos en el timestamp reportado
         offset_seg = int(random.gauss(0, 15))
         ts_event = now + timedelta(seconds=max(min(offset_seg, 30), -30))
-        
-        # Evitar timestamps en el futuro
+
         if ts_event > now:
             ts_event = now
-            
-        ts_str = ts_event.strftime("%b %d %H:%M:%S") # Formato sysylog
 
-        event = {
-            "timestamp": ts_str,
+        # ISO sin sufijo Z: coincide con _parse_timestamp del Normalizer (%Y-%m-%dT%H:%M:%S)
+        ts_iso = ts_event.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+
+        raw_dns_log = {
+            "timestamp": ts_iso,
             "client": persona["dispositivo"],
             "domain": dominio,
             "type": "A",
             "status": "BLOCKED" if force_blocked else "NOERROR",
-            "blocked": force_blocked
+            "blocked": force_blocked,
         }
-        
-        evento = await self._normalizer.normalize(event, "dns")
+
+        evento = await self._normalizer.normalize(raw_dns_log, "dns")
         if evento:
             await self.redis_bus.publish_event(
-                self.redis_bus.STREAM_RAW, evento.to_redis_dict()
+                self.redis_bus.STREAM_RAW,
+                evento.to_redis_dict(),
             )
         
         self.events_last_minute += 1
@@ -259,7 +263,7 @@ class TrafficGenerator:
             
             activas = sum(1 for p in self.personas if self._esta_en_horario(p, now) and (not self.persona_states[p["id"]]["pause_until"] or self.persona_states[p["id"]]["pause_until"] < now))
             
-            logger.info("--- 📊 REPORTE SIMULADOR ---", extra={
+            logger.info("--- REPORTE SIMULADOR ---", extra={
                 "lab_mode": self.lab_mode,
                 "simulated_time": now.strftime("%Y-%m-%d %H:%M:%S"),
                 "activos_ahora": activas,

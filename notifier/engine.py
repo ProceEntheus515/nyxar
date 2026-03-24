@@ -27,6 +27,7 @@ LOG_COLLECTION = "notifications_log"
 
 CHANNEL_URGENT = "notifications:urgent"
 CHANNEL_REPORTS = "notifications:reports"
+CHANNEL_DASHBOARD_ALERTS = "dashboard:alerts"
 CHANNEL_APPROVALS_PENDING = "approvals:pending"
 
 
@@ -432,14 +433,86 @@ class NotificationEngine:
         if any_ok and evento_tipo != "honeypot_hit":
             await self._dedup_mark(evento_tipo, dedup_obj)
 
+    @staticmethod
+    def _merge_pubsub_payload(payload: dict) -> dict:
+        """
+        Unifica envelope {tipo, data} con payload plano (p. ej. playbook notify).
+        El tipo del envelope se conserva en la clave tipo cuando aplica.
+        """
+        inner = payload.get("data")
+        if isinstance(inner, dict):
+            merged = {**inner}
+            if payload.get("tipo") is not None:
+                merged["tipo"] = payload["tipo"]
+            return merged
+        return payload
+
+    async def _handle_incident_alert(self, payload: dict) -> None:
+        """Canal notifications:urgent: alertas de alta prioridad hacia destinatarios admin."""
+        merged = self._merge_pubsub_payload(payload)
+        await self.process_event("notifications_urgent", merged)
+
+    async def _handle_report_ready(self, payload: dict) -> None:
+        merged = self._merge_pubsub_payload(payload)
+        await self.process_event("reporte_listo", merged)
+
+    async def _handle_dashboard_alert_incident(self, data: dict) -> None:
+        """
+        dashboard:alerts solo dispara notificación si severidad es crítica o alta
+        (misma dedup que change stream: id:severidad_normalizada).
+        """
+        sev = _norm_sev(data.get("severidad"))
+        if sev not in ("critica", "alta"):
+            logger.debug("dashboard:alerts omitido (severidad=%s)", sev)
+            return
+        iid = str(data.get("id") or data.get("_id") or "").strip()
+        if not iid:
+            logger.warning("dashboard:alerts sin id de incidente, se omite")
+            return
+        await self.process_event(
+            f"incidente_{sev}",
+            {**data, "dedup_key": f"{iid}:{sev}", "id": iid},
+        )
+
+    async def _route_pubsub_message(self, canal: str, raw: dict) -> None:
+        """Enruta mensaje PubSub según canal (contrato I13)."""
+        if canal == CHANNEL_URGENT:
+            await self._handle_incident_alert(raw)
+            return
+        if canal == CHANNEL_REPORTS:
+            await self._handle_report_ready(raw)
+            return
+        if canal == CHANNEL_DASHBOARD_ALERTS:
+            inner = raw.get("data") if isinstance(raw.get("data"), dict) else raw
+            if not inner:
+                return
+            sev = _norm_sev(inner.get("severidad"))
+            if sev in ("critica", "alta"):
+                await self._handle_dashboard_alert_incident(inner)
+            return
+        if canal == CHANNEL_APPROVALS_PENDING:
+            merged = self._merge_pubsub_payload(raw)
+            await self.process_event("aprobacion_pendiente", merged)
+
     async def _pubsub_loop(self) -> None:
         await self.redis_bus.connect()
         if not self.redis_bus.client:
             logger.error("Redis no disponible: pubsub notificaciones detenido")
             return
         pubsub = self.redis_bus.client.pubsub()
-        await pubsub.subscribe(CHANNEL_URGENT, CHANNEL_REPORTS, CHANNEL_APPROVALS_PENDING)
-        logger.info("PubSub notificaciones: %s, %s, %s", CHANNEL_URGENT, CHANNEL_REPORTS, CHANNEL_APPROVALS_PENDING)
+        await pubsub.subscribe(
+            CHANNEL_URGENT,
+            CHANNEL_REPORTS,
+            CHANNEL_DASHBOARD_ALERTS,
+            CHANNEL_APPROVALS_PENDING,
+        )
+        logger.info(
+            "PubSub notificaciones: %s, %s, %s, %s",
+            CHANNEL_URGENT,
+            CHANNEL_REPORTS,
+            CHANNEL_DASHBOARD_ALERTS,
+            CHANNEL_APPROVALS_PENDING,
+        )
         try:
             async for message in pubsub.listen():
                 if message["type"] != "message":
@@ -454,18 +527,20 @@ class NotificationEngine:
                 ch = message.get("channel")
                 if isinstance(ch, bytes):
                     ch = ch.decode("utf-8", errors="replace")
-                if ch == CHANNEL_URGENT:
-                    await self.process_event("notifications_urgent", data)
-                elif ch == CHANNEL_REPORTS:
-                    await self.process_event("reporte_listo", data)
-                elif ch == CHANNEL_APPROVALS_PENDING:
-                    await self.process_event("aprobacion_pendiente", data)
+                if not isinstance(data, dict):
+                    data = {"raw": data}
+                await self._route_pubsub_message(ch, data)
         except asyncio.CancelledError:
             raise
         except Exception as e:
             logger.error("PubSub notificaciones: %s", e)
         finally:
-            await pubsub.unsubscribe(CHANNEL_URGENT, CHANNEL_REPORTS, CHANNEL_APPROVALS_PENDING)
+            await pubsub.unsubscribe(
+                CHANNEL_URGENT,
+                CHANNEL_REPORTS,
+                CHANNEL_DASHBOARD_ALERTS,
+                CHANNEL_APPROVALS_PENDING,
+            )
             await pubsub.close()
 
     async def _dispatch_incident_change(self, change: dict) -> None:
