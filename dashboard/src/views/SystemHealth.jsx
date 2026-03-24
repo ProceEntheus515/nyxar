@@ -9,10 +9,10 @@ import {
   Tooltip,
 } from 'recharts'
 import { useStore } from '../store'
+import { healthApi } from '../api/client'
 import HealthCard from '../components/health/HealthCard'
 import styles from './SystemHealth.module.css'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const DETAIL_KEY = import.meta.env.VITE_HEALTH_DETAIL_KEY || ''
 
 const COMP_ORDER = ['redis', 'mongodb', 'pipeline']
@@ -48,12 +48,8 @@ export default function SystemHealth() {
     let cancelled = false
     const load = async () => {
       try {
-        const r = await fetch(`${API_BASE}/health/detail`, {
-          headers: { 'X-Nyxar-Health-Key': DETAIL_KEY },
-        })
-        if (!r.ok) return
-        const data = await r.json()
-        if (!cancelled) setHealthReport(data)
+        const data = await healthApi.getDetail(DETAIL_KEY)
+        if (!cancelled && data) setHealthReport(data)
       } catch {
         /* esperamos actualización por WebSocket */
       }

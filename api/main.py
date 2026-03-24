@@ -78,6 +78,7 @@ app = FastAPI(
 # CORS Middleware
 origins = [
     "http://localhost:3000",
+    "http://localhost:5173"
 ]
 prod_cors = os.getenv("FRONTEND_CORS_URL")
 if prod_cors:

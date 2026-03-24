@@ -1280,7 +1280,7 @@ Abrir el browser en http://localhost:3000 y verificar la consola.
 
 ---
 
-## 🔌 FASE 2 — Integraciones de Módulos Avanzados (V2)
+## FASE 2 — Integraciones de Módulos Avanzados (V2)
 
 ---
 

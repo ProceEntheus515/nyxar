@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { simulatorApi } from '../../api/client'
 import styles from './LabSimulatorDock.module.css'
 
 function TargetGlyph() {
@@ -54,15 +55,16 @@ export default function LabSimulatorDock({ collapsed, identities = {} }) {
     if (!target) return
     setLoading(true)
     try {
-      const res = await fetch('http://localhost:8000/api/v1/simulator/scenario', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario, target, intensity }),
-      })
-      const data = await res.json()
-      if (res.ok) {
+      const data = await simulatorApi.runScenario(scenario, target, intensity)
+      if (data?.data) {
         setLogs((prev) =>
-          [{ id: data.data.scenario_id, text: `Ataque ${scenario} iniciado vs ${target}` }, ...prev].slice(0, 3),
+          [
+            {
+              id: data.data.scenario_id,
+              text: `Ataque ${scenario} iniciado vs ${target}`,
+            },
+            ...prev,
+          ].slice(0, 3),
         )
       }
     } catch (e) {
