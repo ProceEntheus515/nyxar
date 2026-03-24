@@ -28,6 +28,10 @@ function riskScoreFromEvent(ev) {
   return Number.isFinite(nested) ? nested : 0
 }
 
+function countPendingProposals(list) {
+  return (list || []).filter((p) => String(p.estado || '') === 'pendiente_aprobacion').length
+}
+
 export const useStore = create(
   subscribeWithSelector((set, get) => {
     const setWsConnection = (connected) =>
@@ -190,13 +194,31 @@ export const useStore = create(
           if (proposal == null || typeof proposal !== 'object') {
             return { responseProposalsPending: state.responseProposalsPending + 1 }
           }
+          const id = proposal.id
+          const rest = id ? state.proposals.filter((p) => p.id !== id) : state.proposals
+          const next = [proposal, ...rest].slice(0, 100)
           return {
-            proposals: [proposal, ...state.proposals],
-            responseProposalsPending: state.responseProposalsPending + 1,
+            proposals: next,
+            responseProposalsPending: countPendingProposals(next),
           }
         }),
 
-      setProposals: (list) => set({ proposals: Array.isArray(list) ? list : [] }),
+      setProposals: (list) => {
+        const proposals = Array.isArray(list) ? list : []
+        set({
+          proposals,
+          responseProposalsPending: countPendingProposals(proposals),
+        })
+      },
+
+      removeProposal: (proposalId) =>
+        set((state) => {
+          const next = state.proposals.filter((p) => p.id !== proposalId)
+          return {
+            proposals: next,
+            responseProposalsPending: countPendingProposals(next),
+          }
+        }),
 
       addAiMemo: (memo) =>
         set((state) => ({

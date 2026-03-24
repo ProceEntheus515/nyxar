@@ -21,6 +21,7 @@ from api.websocket_contract import (
     NEW_EVENT,
     NEW_EVENT_BATCH,
     PONG,
+    RESPONSE_PROPOSAL,
     STATS_UPDATE,
 )
 
@@ -269,6 +270,13 @@ async def redis_listener():
 
                     if tipo == "ai_memo" and isinstance(payload, dict):
                         await sio.emit(AI_MEMO, payload)
+                        continue
+
+                    if tipo == "response_proposal":
+                        await sio.emit(
+                            RESPONSE_PROPOSAL,
+                            payload if isinstance(payload, dict) else {},
+                        )
                         continue
 
                     evt_type = data.get("type")

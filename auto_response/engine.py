@@ -150,6 +150,27 @@ class ResponseEngine:
         if not db:
             return None
         await db[COL_PROPOSALS].insert_one(doc)
+
+        try:
+            if self.redis_bus.client is None:
+                await self.redis_bus.connect()
+            acciones_payload = [a.model_dump(mode="json") for a in plan.acciones]
+            await self.redis_bus.publish_alert(
+                "dashboard:events",
+                {
+                    "tipo": "response_proposal",
+                    "data": {
+                        "id": proposal_id,
+                        "incident_id": incident_id,
+                        "acciones": acciones_payload,
+                        "justificacion": plan.justificacion,
+                        "urgencia": plan.urgencia,
+                    },
+                },
+            )
+        except Exception as e:
+            logger.warning("publish response_proposal dashboard:events: %s", e)
+
         snap = await build_context_snapshot(db, incident_id)
         plan_json = plan.model_dump(mode="json")
         actor_prop = "sistema_automatico" if auto_aprobado else "nyxar_engine"

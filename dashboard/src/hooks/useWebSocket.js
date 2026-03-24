@@ -106,9 +106,30 @@ export function useWebSocket() {
       setHealthThroughput(payload?.points);
     });
 
-    socket.on('response_proposal', () => {
-      addProposal();
-    });
+    socket.on('response_proposal', (payload) => {
+      const p =
+        payload && typeof payload === 'object' && payload.id != null ? payload : null
+      if (p) {
+        const normalized = {
+          id: String(p.id),
+          incident_id: p.incident_id != null ? String(p.incident_id) : '',
+          estado: 'pendiente_aprobacion',
+          plan: {
+            acciones: Array.isArray(p.acciones) ? p.acciones : [],
+            justificacion: p.justificacion != null ? String(p.justificacion) : '',
+            urgencia: p.urgencia != null ? String(p.urgencia) : 'proxima_hora',
+          },
+        }
+        useStore.getState().addProposal(normalized)
+        showToast({
+          type: 'info',
+          title: 'Nueva propuesta de respuesta',
+          message: `Incidente ${normalized.incident_id || '—'} · ${normalized.plan.urgencia}`,
+        })
+      } else {
+        addProposal()
+      }
+    })
 
     socket.on('pong', () => {});
 

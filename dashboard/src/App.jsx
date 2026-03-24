@@ -4,7 +4,7 @@ import { useWebSocket } from './hooks/useWebSocket'
 import { useStore } from './store'
 import Skeleton from './components/ui/Skeleton'
 import AppShell from './components/layout/AppShell'
-import { eventsApi, identitiesApi, incidentsApi, aiApi } from './api/client'
+import { eventsApi, identitiesApi, incidentsApi, aiApi, responseApi } from './api/client'
 
 import { isDevDataEnabled } from './lib/devData'
 import { buildDevMockInitialState } from './lib/mock'
@@ -16,6 +16,7 @@ const HuntingView = React.lazy(() => import('./views/HuntingView'))
 const SystemHealth = React.lazy(() => import('./views/SystemHealth'))
 const RoutePlaceholder = React.lazy(() => import('./views/RoutePlaceholder'))
 const CeoView = React.lazy(() => import('./views/CeoView'))
+const ResponseView = React.lazy(() => import('./views/ResponseView'))
 
 function LoadingView() {
   return (
@@ -61,6 +62,13 @@ function AppRoutes() {
         const memosRes = await aiApi.getMemos()
         const memosList = Array.isArray(memosRes?.data) ? memosRes.data : []
         useStore.getState().setAiMemos(memosList)
+
+        const propRes = await responseApi.getProposals({
+          estado: 'pendiente_aprobacion',
+          limit: 50,
+        })
+        const propList = Array.isArray(propRes?.data) ? propRes.data : []
+        useStore.getState().setProposals(propList)
       } catch (err) {
         console.error('Error cargando estado inicial:', err)
       }
@@ -80,15 +88,7 @@ function AppRoutes() {
             <Route path="identities" element={<Identities />} />
             <Route path="hunting" element={<HuntingViewRoute />} />
             <Route path="health" element={<SystemHealth />} />
-            <Route
-              path="responses"
-              element={
-                <RoutePlaceholder
-                  title="Respuestas"
-                  description="Propuestas de respuesta y playbooks automatizados. Pantalla en construcción."
-                />
-              }
-            />
+            <Route path="responses" element={<ResponseView />} />
             <Route
               path="reports"
               element={
