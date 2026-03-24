@@ -60,6 +60,13 @@ En OPNsense, ir a System > Settings > Logging / Targets:
   Protocolo: UDP
   Seleccionar categorias de firewall segun politica local.
 """,
+        "cisco": f"""
+En Cisco ASA / FMC (syslog hacia servidor externo):
+  logging host <interface_name> {nyxar_ip} / UDP / 514
+  logging trap informational
+  logging enable
+Ajustar interface_name a la interfaz hacia NYXAR (segun topologia).
+""",
         "generic": f"""
 Configurar el firewall para enviar syslog UDP a:
   Destino: {nyxar_ip}
@@ -77,4 +84,6 @@ Opcional TCP/TLS al puerto 6514 si NYXAR tiene certificado (NYXAR_SYSLOG_TLS_*).
         return instructions["pfsense"].strip()
     if "opnsense" in fw or "opn sense" in fw:
         return instructions["opnsense"].strip()
+    if "cisco" in fw or "asa" in fw:
+        return instructions["cisco"].strip()
     return instructions["generic"].strip()

@@ -36,6 +36,9 @@ faker
 # --- ad_connector ---
 ldap3
 
+# --- discovery setup wizard (D08) ---
+rich
+
 # --- tests (dev) ---
 pytest
 pytest-asyncio
