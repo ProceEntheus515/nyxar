@@ -133,6 +133,7 @@ class EnrichmentEngine:
             elif tipo == "hash":
                 match_local = await self.feeds.check_misp_hash(evento.externo.valor)
 
+            # I10: hits misp_* leen contexto en misp:meta:{valor} dentro de _enrichment_from_misp
             if match_local:
                 if match_local.startswith("misp_"):
                     if match_local == "misp_domains":

@@ -12,11 +12,39 @@ from shared.redis_bus import RedisBus
 
 logger = get_logger("enricher.feeds.downloader")
 
+# I10 — listas IP: spamhaus se resuelve por CIDR; feodo y misp por SISMEMBER
+ALL_IP_BLOCKLISTS = [
+    "blocklist:spamhaus_drop",
+    "blocklist:spamhaus_edrop",
+    "blocklist:feodo",
+    "blocklist:misp_ips",
+]
+
+ALL_DOMAIN_BLOCKLISTS = [
+    "blocklist:urlhaus",
+    "blocklist:misp_domains",
+]
+
+# Threatfox almacena IOCs mezclados; el enricher también consulta dominios ahí (feeds NYXAR)
+ALL_DOMAIN_BLOCKLISTS_FEEDS = [
+    "blocklist:urlhaus",
+    "blocklist:threatfox",
+    "blocklist:misp_domains",
+]
+
 MISP_BLOCKLISTS = [
     "blocklist:misp_ips",
     "blocklist:misp_domains",
     "blocklist:misp_urls",
     "blocklist:misp_hashes",
+]
+
+# Orden check_ip: sets directos (misp exige metadata vigente misp:meta:{valor})
+_IP_SET_CHECKS: List[tuple[str, str, bool]] = [
+    ("blocklist:feodo", "feodo_ip", False),
+    ("blocklist:threatfox", "threatfox_iocs", False),
+    ("blocklist:nyxar_external", "nyxar_external", False),
+    ("blocklist:misp_ips", "misp_ips", True),
 ]
 
 
@@ -192,20 +220,20 @@ class FeedDownloader:
         except ValueError:
             return None # Inválida
             
-        # Revisión SET directo puro O(1)
-        if await r.sismember("blocklist:feodo", ip): return "feodo_ip"
-        if await r.sismember("blocklist:threatfox", ip): return "threatfox_iocs"
-        if await r.sismember("blocklist:nyxar_external", ip):
-            return "nyxar_external"
-        
-        # Revisión CIDR O(N) cacheado
-        for cidr_list in [self.FEEDS["spamhaus_drop"]["redis_key"], self.FEEDS["spamhaus_edrop"]["redis_key"]]:
+        for redis_key, codigo, requiere_meta_misp in _IP_SET_CHECKS:
+            if not await r.sismember(redis_key, ip):
+                continue
+            if requiere_meta_misp and not await self._misp_meta_ok(ip):
+                continue
+            return codigo
+
+        # CIDR — claves alineadas con ALL_IP_BLOCKLISTS[0:2] vía FEEDS
+        for feed_name in ("spamhaus_drop", "spamhaus_edrop"):
+            cidr_list = self.FEEDS[feed_name]["redis_key"]
             redes = await self._get_cidr_set(cidr_list)
             if any(target in network for network in redes):
                 return cidr_list.replace("blocklist:", "")
 
-        if await r.sismember("blocklist:misp_ips", ip) and await self._misp_meta_ok(ip):
-            return "misp_ips"
         return None
 
     async def check_domain(self, domain: str) -> Optional[str]:
@@ -222,22 +250,27 @@ class FeedDownloader:
         for i in range(len(parts)-1):
             permutations.append(".".join(parts[i:]))
         
+        n_listas = len(ALL_DOMAIN_BLOCKLISTS_FEEDS)
         pipe = r.pipeline()
         for p in permutations:
-            pipe.sismember("blocklist:urlhaus", p)
-            pipe.sismember("blocklist:threatfox", p)
-            pipe.sismember("blocklist:misp_domains", p)
+            for bl in ALL_DOMAIN_BLOCKLISTS_FEEDS:
+                pipe.sismember(bl, p)
 
         resultados = await pipe.execute()
 
         for idx, perm in enumerate(permutations):
-            b = idx * 3
-            if resultados[b]:
-                return "urlhaus_domains"
-            if resultados[b + 1]:
-                return "threatfox_iocs"
-            if resultados[b + 2] and await self._misp_meta_ok(perm):
-                return "misp_domains"
+            base = idx * n_listas
+            for j, bl in enumerate(ALL_DOMAIN_BLOCKLISTS_FEEDS):
+                if not resultados[base + j]:
+                    continue
+                if bl == "blocklist:misp_domains":
+                    if await self._misp_meta_ok(perm):
+                        return "misp_domains"
+                    continue
+                if bl == "blocklist:urlhaus":
+                    return "urlhaus_domains"
+                if bl == "blocklist:threatfox":
+                    return "threatfox_iocs"
 
         return None
 
