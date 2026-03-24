@@ -4,6 +4,7 @@
  */
 
 import { clearSessionAuth, getAccessToken } from './session'
+import { isNyxarDevBypassToken } from '../config/devAuth'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(
   /\/$/,
@@ -85,7 +86,8 @@ async function requestUrl(url, endpointLabel, options = {}) {
       if (
         response.status === 401 &&
         typeof endpointLabel === 'string' &&
-        !endpointLabel.includes('auth/login')
+        !endpointLabel.includes('auth/login') &&
+        !isNyxarDevBypassToken(getAccessToken())
       ) {
         clearSessionAuth()
         if (typeof window !== 'undefined') {

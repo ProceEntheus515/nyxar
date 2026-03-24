@@ -2,14 +2,32 @@ import React, { useEffect, useState } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { useStore } from './store'
 import { getAccessToken, setSessionAuth, clearSessionAuth } from './api/session'
+import {
+  isDevLoginBypassEnabled,
+  isNyxarDevBypassToken,
+  NYXAR_DEV_BYPASS_TOKEN,
+} from './config/devAuth'
 import LoginView from './views/LoginView'
 import AppWithSocket from './components/auth/AppWithSocket'
 
+function readInitialToken() {
+  const stored = getAccessToken()
+  if (stored) return stored
+  if (isDevLoginBypassEnabled()) {
+    setSessionAuth(NYXAR_DEV_BYPASS_TOKEN, 'dev')
+    return NYXAR_DEV_BYPASS_TOKEN
+  }
+  return null
+}
+
 export default function App() {
-  const [token, setToken] = useState(() => getAccessToken())
+  const [token, setToken] = useState(() => readInitialToken())
 
   useEffect(() => {
     const onExpire = () => {
+      if (isDevLoginBypassEnabled() && isNyxarDevBypassToken(getAccessToken())) {
+        return
+      }
       clearSessionAuth()
       setToken(null)
     }

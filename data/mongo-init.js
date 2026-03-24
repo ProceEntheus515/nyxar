@@ -48,3 +48,26 @@ db.honeypot_hits.createIndex({ "timestamp": -1 })
 // S13: audit de seguridad del producto (append-only por convención; sin rutas de borrado en API)
 db.createCollection("security_audit_log")
 db.security_audit_log.createIndex({ "timestamp": -1 })
+
+// --- NYXAR V8: grafo, memoria profunda, hallazgos emergentes ---
+db.createCollection("entity_graph_nodes")
+db.entity_graph_nodes.createIndex({ "tipo": 1, "risk_score": -1 })
+db.entity_graph_nodes.createIndex({ "betweenness": -1 })
+db.entity_graph_nodes.createIndex({ "is_new": 1, "first_seen": -1 })
+
+db.createCollection("entity_graph_edges")
+db.entity_graph_edges.createIndex({ "source_id": 1 })
+db.entity_graph_edges.createIndex({ "target_id": 1 })
+db.entity_graph_edges.createIndex({ "tipo": 1, "is_new": 1 })
+db.entity_graph_edges.createIndex({ "weight": -1 })
+
+db.createCollection("behavior_fingerprints")
+db.behavior_fingerprints.createIndex({ "created_at": -1 })
+
+db.createCollection("unknown_findings")
+db.unknown_findings.createIndex({ "created_at": -1 })
+db.unknown_findings.createIndex({ "status": 1 })
+
+db.createCollection("emergent_taxonomy")
+db.emergent_taxonomy.createIndex({ "slug": 1 }, { unique: true })
+db.emergent_taxonomy.createIndex({ "updated_at": -1 })

@@ -39,6 +39,10 @@ ldap3
 # --- discovery setup wizard (D08) ---
 rich
 
+# --- NYXAR V8 (entity_graph, deep_memory) ---
+networkx
+numpy
+
 # --- tests (dev) ---
 pytest
 pytest-asyncio
