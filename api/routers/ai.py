@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 import anthropic
 from shared.logger import get_logger
@@ -12,6 +12,7 @@ from shared.mongo_client import MongoClient
 from shared.redis_bus import RedisBus
 from api.auth.deps import require_analyst, require_viewer
 from api.utils import success_response, error_response
+from api.middleware.rate_limit import limiter
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 logger = get_logger("api.ai")
@@ -123,7 +124,8 @@ async def analyze_incident(incident_id: str):
     return success_response({"status": "processing", "memo_id": memo_id})
 
 @router.post("/ceo-view", dependencies=[Depends(require_viewer)])
-async def generar_ceo_view():
+@limiter.limit("10/hour", override_defaults=False)
+async def generar_ceo_view(request: Request):
     """Reporte Ejecutivo (Synchronous await)."""
     try:
         hoy = datetime.now(timezone.utc).replace(hour=0, minute=0, microsecond=0).isoformat()

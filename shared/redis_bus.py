@@ -20,7 +20,7 @@ class RedisBus:
     MISP_HITS_ZSET = "misp:hits"
 
     def __init__(self):
-        self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+        self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         self.pool: Optional[redis.ConnectionPool] = None
         self.client: Optional[redis.Redis] = None
 
@@ -45,9 +45,11 @@ class RedisBus:
         if not self.pool:
             logger.info("Iniciando pool de conexiones Redis", extra={"url": self.redis_url})
             self.pool = redis.ConnectionPool.from_url(
-                self.redis_url, 
-                max_connections=20, 
-                decode_responses=True
+                self.redis_url,
+                max_connections=20,
+                decode_responses=True,
+                socket_timeout=5,
+                socket_connect_timeout=5,
             )
             self.client = redis.Redis(connection_pool=self.pool)
 

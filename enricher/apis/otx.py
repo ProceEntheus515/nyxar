@@ -2,10 +2,14 @@ import os
 import time
 import httpx
 import asyncio
-from typing import Optional
+from typing import Optional, Any
 from api.models import Enrichment
 
 from shared.logger import get_logger
+from enricher.validators.external_response import (
+    OTXGeneralResponse,
+    validate_external_response,
+)
 
 logger = get_logger("enricher.apis.otx")
 
@@ -58,18 +62,28 @@ class AlienVaultOTX:
                         return Enrichment(
                             reputacion="desconocido", # type: ignore
                             fuente="AlienVault OTX",
-                            detalles={"pulse_count": 0}
                         )
                         
                     resp.raise_for_status()
-                    data = resp.json()
-                    
-                    pulse_count = data.get("pulse_info", {}).get("count", 0)
-                    pulses = data.get("pulse_info", {}).get("pulses", [])
+                    raw = resp.json()
+                    if not isinstance(raw, dict):
+                        logger.warning("[OTX] Cuerpo JSON no es objeto; se ignora.")
+                        return None
+
+                    validated = validate_external_response(
+                        raw, OTXGeneralResponse, "AlienVault OTX"
+                    )
+                    if validated is None:
+                        return None
+
+                    pi = validated.pulse_info
+                    pulse_count = pi.count if pi else 0
+                    pulses: list[Any] = pi.pulses if pi else []
                     
                     tags = []
                     for p in pulses:
-                        tags.extend(p.get("tags", []))
+                        if isinstance(p, dict):
+                            tags.extend(p.get("tags", []))
                     tags = list(set(tags)) # Deduplicate
                     
                     if pulse_count > 0:
@@ -80,16 +94,18 @@ class AlienVaultOTX:
                         rep = "limpio"
                         
                     logger.info(f"[API_CALL] API: OTX | Valor: {valor} | Latencia: {latencia}ms | Status: {resp.status_code} | Res: {rep}")
+
+                    base = validated.base_indicator or {}
+                    country = ""
+                    if isinstance(base, dict):
+                        country = str(base.get("country_name") or "")
                     
                     return Enrichment(
                         reputacion=rep, # type: ignore
                         fuente="AlienVault OTX",
-                        detalles={
-                            "pulse_count": pulse_count,
-                            "country": data.get("base_indicator", {}).get("country_name", ""),
-                            "asn": data.get("asn", ""),
-                            "tags": tags[:10] # Top 10 tags max
-                        }
+                        pais_origen=country or None,
+                        asn=validated.asn,
+                        tags=tags[:10],
                     )
             except Exception as e:
                 latencia = round((time.time() - start_t) * 1000, 2)

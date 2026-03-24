@@ -1,10 +1,11 @@
-# Overlay producción — MongoDB endurecido (TLS, contenedor sin privilegios, sin puertos publicados).
+# Overlay producción — MongoDB (TLS) y Redis endurecidos; sin puertos publicados hacia el host.
 # Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # Requisitos previos:
 # - Generar data/ssl/nyxar-mongo.pem (certificado + clave en un solo PEM).
 # - Definir MONGO_INITDB_ROOT_*, MONGO_READER_PASSWORD, MONGO_WRITER_PASSWORD, MONGO_ADMIN_PASSWORD.
-# - MONGODB_URL en servicios con tls=true y authSource=nyxar (ver .env.example).
+# - MONGODB_URL con tls=true y authSource=nyxar (ver .env.example).
+# - REDIS_PASSWORD (min. 32 caracteres recomendado) y REDIS_URL con credenciales.
 
 services:
   mongodb:
@@ -16,6 +17,16 @@ services:
     volumes:
       - ./data/ssl/nyxar-mongo.pem:/etc/ssl/nyxar-mongo.pem:ro
       - ./mongo-security.conf:/etc/mongo/mongo-security.conf:ro
+    user: "999:999"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     user: "999:999"
     read_only: true
     tmpfs:

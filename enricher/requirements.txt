@@ -2,3 +2,4 @@ httpx
 redis
 motor
 schedule
+pydantic

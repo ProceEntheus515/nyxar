@@ -22,8 +22,9 @@ from shared.logger import get_logger
 
 logger = get_logger("tests.e2e")
 
-REDIS_URL = "redis://localhost:6379"
-# Con Docker Compose y S05, exportá MONGODB_URL (p. ej. nyxar_writer + authSource=nyxar). Puerto publicado: 27017 si mapeás mongo.
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+# Con stack Docker (S06), definí REDIS_URL con contraseña; Redis no expone 6379 al host por defecto.
+# Con Docker Compose y S05, exportá MONGODB_URL (p. ej. nyxar_writer + authSource=nyxar).
 MONGO_URL = os.getenv("MONGO_URL") or os.getenv("MONGODB_URL") or "mongodb://localhost:27017"
 MONGO_DB   = "nyxar"
 API_BASE   = "http://localhost:8000"

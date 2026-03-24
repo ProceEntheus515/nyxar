@@ -9,6 +9,7 @@ import os
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from observability.health import HealthChecker, quick_health
+from api.middleware.rate_limit import limiter
 
 router = APIRouter(tags=["health"])
 
@@ -27,6 +28,7 @@ async def require_health_detail_key(
 
 
 @router.get("/health")
+@limiter.exempt
 async def health_live(request: Request) -> dict:
     redis_bus = getattr(request.app.state, "redis_bus", None)
     mongo = getattr(request.app.state, "mongo_client", None)
@@ -36,6 +38,7 @@ async def health_live(request: Request) -> dict:
 
 
 @router.get("/health/detail", dependencies=[Depends(require_health_detail_key)])
+@limiter.exempt
 async def health_detail(request: Request) -> dict:
     redis_bus = getattr(request.app.state, "redis_bus", None)
     mongo = getattr(request.app.state, "mongo_client", None)

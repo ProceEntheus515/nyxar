@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+slowapi
 motor
 redis
 python-socketio

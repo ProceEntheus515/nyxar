@@ -5,8 +5,11 @@ from typing import Dict, Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from datetime import datetime, timezone
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from api.middleware.cors import configure_cors
+from api.middleware.rate_limit import limiter
 from api.middleware.request_size import RequestSizeLimitMiddleware
 from api.middleware.security import SecurityMiddleware
 from shared.logger import get_logger
@@ -79,11 +82,33 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+app.state.limiter = limiter
 
 # S02: CORS estricto, cabeceras de seguridad, límite de tamaño (orden: último = más externo)
 configure_cors(app)
 app.add_middleware(SecurityMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
+app.add_middleware(SlowAPIMiddleware)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    retry_after = 60
+    resp = JSONResponse(
+        status_code=429,
+        content={
+            "error": "Demasiadas solicitudes",
+            "retry_after": retry_after,
+            "detail": "El limite de solicitudes fue excedido. Intenta mas tarde.",
+            "code": "RATE_LIMIT_EXCEEDED",
+        },
+        headers={"Retry-After": str(retry_after)},
+    )
+    vl = getattr(request.state, "view_rate_limit", None)
+    if vl is not None:
+        resp = limiter._inject_headers(resp, vl)
+    return resp
+
 
 # Exception Handler custom de fallback estandarizado
 @app.exception_handler(Exception)
@@ -128,6 +153,7 @@ def success_response(data: Any, total: int = None) -> Dict[str, Any]:
     return res
 
 @app.get("/")
+@limiter.exempt
 async def root():
     return RedirectResponse(url="/api/v1/identity", status_code=302)
 

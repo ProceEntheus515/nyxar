@@ -102,8 +102,9 @@ Variables definidas en `.env.example` (todas pueden ajustarse según tu entorno)
 
 | Variable | Descripción | Requerida | Ejemplo |
 |----------|-------------|-----------|---------|
-| `REDIS_URL` | URL del broker Redis (DB lógica opcional en path) | Sí (Docker) | `redis://redis:6379/0` |
-| `MONGODB_URL` | URI de MongoDB | Sí (Docker) | `mongodb://mongodb:27017/nyxar` |
+| `REDIS_PASSWORD` | Contraseña del servidor Redis (S06) | Sí (Docker) | (32+ caracteres, p. ej. `openssl rand -base64 32`) |
+| `REDIS_URL` | URL del broker con contraseña (`redis://:PASS@redis:6379/0`) | Sí (Docker) | Ver `.env.example` |
+| `MONGODB_URL` | URI de MongoDB con auth (`authSource=nyxar`) | Sí (Docker) | Ver `.env.example` |
 | `ANTHROPIC_API_KEY` | Claude para el analista IA | No | `sk-ant-...` |
 | `ABUSEIPDB_KEY` | Reputación de IP | No | `your_key` |
 | `VIRUSTOTAL_KEY` | URLs y hashes | No | `your_key` |

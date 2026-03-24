@@ -18,11 +18,13 @@ from api.auth.core import (
 from api.auth.deps import get_db, require_admin
 from api.auth.models import CreateApiKeyBody, LoginRequest, User
 from api.auth.roles import ROLE_HIERARCHY
+from api.middleware.rate_limit import limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login")
+@limiter.limit("5/minute", override_defaults=False)
 async def login(credentials: LoginRequest, request: Request, db=Depends(get_db)) -> dict:
     user = await db.users.find_one({"username": credentials.username.strip()})
     stored_hash = (
@@ -56,6 +58,7 @@ async def login(credentials: LoginRequest, request: Request, db=Depends(get_db))
 
 
 @router.post("/api-keys")
+@limiter.limit("10/hour", override_defaults=False)
 async def create_api_key(
     body: CreateApiKeyBody,
     request: Request,

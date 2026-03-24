@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from api.auth.deps import require_viewer
@@ -11,6 +11,7 @@ from api.validators import (
 )
 from shared.mongo_client import MongoClient
 from api.utils import success_response, error_response
+from api.middleware.rate_limit import limiter
 
 router = APIRouter(prefix="/events", tags=["events"], dependencies=[Depends(require_viewer)])
 mongo_client = MongoClient()
@@ -75,7 +76,9 @@ async def get_event(event_id: str):
     return success_response(doc)
 
 @router.get("/")
+@limiter.limit("300/minute", override_defaults=False)
 async def list_events(
+    request: Request,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0, le=10000),
     source: Optional[str] = Query(

@@ -6,12 +6,13 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from api.auth.deps import require_analyst, require_viewer
 from api.utils import error_response, success_response
+from api.middleware.rate_limit import limiter
 from shared.logger import get_logger
 from shared.mongo_client import MongoClient
 from threat_hunting.hunter import Hunter, SESSIONS_COLLECTION
@@ -61,7 +62,8 @@ async def list_hypotheses(limit: int = 50, offset: int = 0):
 
 
 @router.post("/hypotheses", dependencies=[Depends(require_analyst)])
-async def create_hypothesis_manual(body: ManualHypothesisBody):
+@limiter.limit("30/hour", override_defaults=False)
+async def create_hypothesis_manual(request: Request, body: ManualHypothesisBody):
     engine = HypothesisEngine(mongo=mongo_client)
     hyp = await engine.formalize_manual_hypothesis(
         body.descripcion,

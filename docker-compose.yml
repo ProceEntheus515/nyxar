@@ -8,13 +8,21 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - ./data/redis:/data
-    command: redis-server --appendonly yes
+      - ./data/redis-security.conf:/etc/redis/redis-security.conf:ro
+    command:
+      - sh
+      - -c
+      - redis-server /etc/redis/redis-security.conf --requirepass "$$REDIS_PASSWORD"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          'redis-cli -a "$$REDIS_PASSWORD" ping | grep -q PONG',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

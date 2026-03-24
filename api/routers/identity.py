@@ -9,8 +9,10 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+
+from api.middleware.rate_limit import limiter
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 NYXAR_STATE_FILE = PROJECT_ROOT / ".nyxar_state"
@@ -261,7 +263,8 @@ def _static_identity_payload() -> dict:
 
 
 @router.get("/identity")
-async def get_identity():
+@limiter.limit("60/minute", override_defaults=False)
+async def get_identity(request: Request):
     """
     Retorna la identidad completa del sistema NYXAR.
     No debe devolver 500: ante fallo se usa cuerpo estático.

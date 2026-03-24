@@ -6,6 +6,10 @@ from typing import Optional
 from api.models import Enrichment
 
 from shared.logger import get_logger
+from enricher.validators.external_response import (
+    AbuseIPDBResponse,
+    validate_external_response,
+)
 
 logger = get_logger("enricher.apis.abuseipdb")
 
@@ -51,11 +55,18 @@ class AbuseIPDB:
                         return None
                         
                     resp.raise_for_status()
-                    data = resp.json().get("data", {})
-                    
-                    score = data.get("abuseConfidenceScore", 0)
-                    country = data.get("countryCode", "")
-                    
+                    raw = resp.json().get("data") or {}
+                    if not isinstance(raw, dict):
+                        logger.warning("[ABUSEIPDB] Campo data no es objeto; se ignora.")
+                        return None
+
+                    validated = validate_external_response(
+                        raw, AbuseIPDBResponse, "AbuseIPDB"
+                    )
+                    if validated is None:
+                        return None
+
+                    score = validated.abuseConfidenceScore
                     if score > 50:
                         rep = "malicioso"
                     elif score > 20:
@@ -70,12 +81,8 @@ class AbuseIPDB:
                     return Enrichment(
                         reputacion=rep, # type: ignore
                         fuente="AbuseIPDB",
-                        detalles={
-                            "confidence_score": score,
-                            "country": country,
-                            "total_reports": data.get("totalReports", 0),
-                            "isp": data.get("isp", "")
-                        }
+                        pais_origen=validated.countryCode,
+                        asn=validated.isp,
                     )
             except Exception as e:
                 latencia = round((time.time() - start_t) * 1000, 2)

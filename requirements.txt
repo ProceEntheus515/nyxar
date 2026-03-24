@@ -6,6 +6,7 @@
 # --- api ---
 fastapi
 uvicorn
+slowapi
 motor
 redis
 prometheus-client

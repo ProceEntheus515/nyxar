@@ -2,13 +2,14 @@ import os
 import json
 import uuid
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from api.auth.deps import require_admin, require_viewer
 from api.utils import success_response, error_response
 from shared.redis_bus import RedisBus
 from shared.logger import get_logger
+from api.middleware.rate_limit import limiter
 
 # Lazy load para no trabar si hay error de modulo en app prod
 try:
@@ -27,7 +28,8 @@ class ScenarioRequest(BaseModel):
     intensity: str
 
 @router.post("/scenario", dependencies=[Depends(require_admin)])
-async def start_scenario(req: ScenarioRequest):
+@limiter.limit("20/hour", override_defaults=False)
+async def start_scenario(request: Request, req: ScenarioRequest):
     if not run_scenario or req.scenario not in SCENARIOS:
         raise HTTPException(400, "Scenario engine no cargado o no existe")
         
