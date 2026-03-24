@@ -25,17 +25,37 @@ services:
   mongodb:
     image: mongo:7.0
     restart: unless-stopped
+    command:
+      - mongod
+      - --config
+      - /etc/mongo/mongo-security-docker.conf
+      - --auth
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: nyxar
+      MONGO_READER_PASSWORD: ${MONGO_READER_PASSWORD}
+      MONGO_WRITER_PASSWORD: ${MONGO_WRITER_PASSWORD}
+      MONGO_ADMIN_PASSWORD: ${MONGO_ADMIN_PASSWORD}
     volumes:
       - ./data/mongodb:/data/db
       - ./data/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./data/mongo-security-init.js:/docker-entrypoint-initdb.d/mongo-security-init.js:ro
+      - ./mongo-security-docker.conf:/etc/mongo/mongo-security-docker.conf:ro
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand({ping:1})"]
+      test:
+        [
+          "CMD-SHELL",
+          'mongosh --quiet -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ping:1})" || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
     env_file: .env
     networks:
-      - nyxar-net
+      nyxar-net:
+        aliases:
+          - mongo
 
   pihole:
     image: pihole/pihole:latest

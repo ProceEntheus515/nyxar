@@ -1,4 +1,6 @@
 // Time Series Collection para eventos — compresión automática + queries por rango optimizadas
+// S05: el TTL sobre timeField ya limita retención (~30 días); no duplicar índice TTL en timestamp
+// (MongoDB time series no admite bien un segundo TTL redundante sobre el mismo campo).
 db.createCollection("events", {
   timeseries: {
     timeField: "timestamp",
@@ -17,6 +19,17 @@ db.createCollection("identities")
 db.identities.createIndex({ "id": 1 }, { unique: true })
 db.identities.createIndex({ "risk_score_actual": -1 })
 db.identities.createIndex({ "area": 1 })
+// S05: índice parcial — solo documentos con ultima_actividad (modelo API); el umbral "24 h" no puede
+// fijarse en partialFilterExpression (quedaría congelado al crear el índice), por eso solo exigimos fecha.
+db.identities.createIndex(
+  { "risk_score_actual": -1 },
+  {
+    name: "identities_risk_score_actual_con_actividad_partial",
+    partialFilterExpression: {
+      ultima_actividad: { $exists: true, $type: "date" },
+    },
+  }
+)
 
 // Incidentes
 db.createCollection("incidents")

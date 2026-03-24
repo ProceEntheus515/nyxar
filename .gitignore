@@ -11,3 +11,8 @@ venv/
 .venv/
 env/
 .cursor/
+
+# Certificados TLS Mongo (S05); conservar solo .gitkeep en data/ssl/
+data/ssl/*.pem
+data/ssl/*-temp.key
+data/ssl/*-temp.crt
