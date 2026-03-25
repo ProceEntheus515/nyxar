@@ -63,6 +63,8 @@ db.entity_graph_edges.createIndex({ "weight": -1 })
 
 db.createCollection("behavior_fingerprints")
 db.behavior_fingerprints.createIndex({ "created_at": -1 })
+db.behavior_fingerprints.createIndex({ "entity_id": 1, "period_start": 1 })
+db.behavior_fingerprints.createIndex({ "entity_id": 1, "period_end": -1 })
 
 db.createCollection("unknown_findings")
 db.unknown_findings.createIndex({ "created_at": -1 })
